@@ -1,6 +1,5 @@
 package com.thanh.librarymanagementsystem.controller;
 
-import com.thanh.librarymanagementsystem.model.Genre;
 import com.thanh.librarymanagementsystem.payload.dto.GenreDTO;
 import com.thanh.librarymanagementsystem.service.GenreService;
 import lombok.RequiredArgsConstructor;

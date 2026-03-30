@@ -11,12 +11,13 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class GenreServiceImpl implements GenreService {
+    private final GenreRepository repository;
     private final GenreMapper mapper;
 
     @Override
     public GenreDTO createGenre(GenreDTO genreDTO) {
-        Genre savedGenre = mapper.toGenre(genreDTO);
-
+        Genre genre = mapper.toEntity(genreDTO);
+        Genre savedGenre = repository.save(genre);
         return mapper.toDTO(savedGenre);
     }
 }

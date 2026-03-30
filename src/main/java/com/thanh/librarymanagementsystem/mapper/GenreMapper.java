@@ -6,7 +6,6 @@ import com.thanh.librarymanagementsystem.repository.GenreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -15,7 +14,7 @@ import java.util.Optional;
 public class GenreMapper {
     private final GenreRepository repository;
 
-    public Genre toGenre(GenreDTO dto) {
+    public Genre toEntity(GenreDTO dto) {
         if (dto == null) return null;
 
         Genre genre = Genre.builder()
@@ -31,7 +30,7 @@ public class GenreMapper {
             genre.setParentGenre(parentGenre);
         }
 
-        return repository.save(genre);
+        return genre;
     }
 
     public GenreDTO toDTO(Genre savedGenre) {
