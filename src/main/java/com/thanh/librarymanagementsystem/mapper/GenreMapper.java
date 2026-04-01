@@ -1,52 +1,32 @@
 package com.thanh.librarymanagementsystem.mapper;
 
+import com.thanh.librarymanagementsystem.exception.GenreException;
 import com.thanh.librarymanagementsystem.model.Genre;
 import com.thanh.librarymanagementsystem.payload.dto.GenreDTO;
 import com.thanh.librarymanagementsystem.repository.GenreRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.mapstruct.AfterMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collections;
 import java.util.Optional;
 
-@Component
-@RequiredArgsConstructor
-public class GenreMapper {
-    private final GenreRepository repository;
+@Mapper(componentModel = "spring")
+public abstract class GenreMapper implements EntityMapper<GenreDTO, Genre> {
+    @Autowired
+    protected GenreRepository repository;
 
-    public Genre toEntity(GenreDTO dto) {
-        if (dto == null) return null;
-
-        Genre genre = Genre.builder()
-                .code(dto.getCode())
-                .name(dto.getName())
-                .description(dto.getDescription())
-                .displayOrder(dto.getDisplayOrder())
-                .active(true)
-                .build();
-
+    @AfterMapping
+    protected void handleToEntity(GenreDTO dto, @MappingTarget Genre genre) {
         if (dto.getParentGenreId() != null) {
-            Genre parentGenre = repository.findById(dto.getParentGenreId()).orElseThrow(() -> new RuntimeException("Parent id is not found " + dto.getParentGenreId()));
+            Genre parentGenre = repository.findById(dto.getParentGenreId()).orElseThrow(() -> new GenreException("Parent id is not found " + dto.getParentGenreId()));
             genre.setParentGenre(parentGenre);
         }
-
-        return genre;
     }
 
-    public GenreDTO toDTO(Genre savedGenre) {
-        if (savedGenre == null) return null;
-
-        GenreDTO dto = GenreDTO.builder()
-                .id(savedGenre.getId())
-                .code(savedGenre.getCode())
-                .name(savedGenre.getName())
-                .description(savedGenre.getDescription())
-                .displayOrder(savedGenre.getDisplayOrder())
-                .active(true)
-                .createdAt(savedGenre.getCreatedAt())
-                .updatedAt(savedGenre.getUpdatedAt())
-                .build();
-
+    @AfterMapping
+    protected void handleToDTO(@MappingTarget GenreDTO dto, Genre savedGenre) {
         if (savedGenre.getParentGenre() != null) {
             dto.setParentGenreId(savedGenre.getParentGenre().getId());
             dto.setParentGenreName(savedGenre.getParentGenre().getName());
@@ -58,7 +38,8 @@ public class GenreMapper {
                         .filter(Genre::getActive)
                         .map(this::toDTO)
                         .toList());
-
-        return dto;
     }
+//    public Genre updateEntityFromDto(Genre existingGenre, GenreDTO dto) {
+//
+//    }
 }

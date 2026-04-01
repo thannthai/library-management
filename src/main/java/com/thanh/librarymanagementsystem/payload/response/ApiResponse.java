@@ -1,0 +1,19 @@
+package com.thanh.librarymanagementsystem.payload.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ApiResponse<T> {
+    private String message;
+    private Boolean status;
+    private T data;
+
+    public ApiResponse (String message, Boolean status) {
+        this.message = message;
+        this.status = status;
+    }
+}
