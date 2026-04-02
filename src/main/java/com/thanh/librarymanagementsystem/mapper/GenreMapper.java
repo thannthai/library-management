@@ -2,7 +2,8 @@ package com.thanh.librarymanagementsystem.mapper;
 
 import com.thanh.librarymanagementsystem.exception.GenreException;
 import com.thanh.librarymanagementsystem.model.Genre;
-import com.thanh.librarymanagementsystem.payload.dto.GenreDTO;
+import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import com.thanh.librarymanagementsystem.repository.GenreRepository;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
@@ -13,12 +14,12 @@ import java.util.Collections;
 import java.util.Optional;
 
 @Mapper(componentModel = "spring")
-public abstract class GenreMapper implements EntityMapper<GenreDTO, Genre> {
+public abstract class GenreMapper implements BaseMapper<GenreRequest, GenreResponse, Genre> {
     @Autowired
     protected GenreRepository repository;
 
     @AfterMapping
-    protected void handleToEntity(GenreDTO dto, @MappingTarget Genre genre) {
+    protected void handleToEntity(GenreRequest dto, @MappingTarget Genre genre) {
         if (dto.getParentGenreId() != null) {
             Genre parentGenre = repository.findById(dto.getParentGenreId()).orElseThrow(() -> new GenreException("Parent id is not found " + dto.getParentGenreId()));
             genre.setParentGenre(parentGenre);
@@ -26,20 +27,17 @@ public abstract class GenreMapper implements EntityMapper<GenreDTO, Genre> {
     }
 
     @AfterMapping
-    protected void handleToDTO(@MappingTarget GenreDTO dto, Genre savedGenre) {
+    protected void handleToDTO(Genre savedGenre, @MappingTarget GenreResponse response) {
         if (savedGenre.getParentGenre() != null) {
-            dto.setParentGenreId(savedGenre.getParentGenre().getId());
-            dto.setParentGenreName(savedGenre.getParentGenre().getName());
+            response.setParentGenreId(savedGenre.getParentGenre().getId());
+            response.setParentGenreName(savedGenre.getParentGenre().getName());
         }
 
-        dto.setSubGenres(Optional.ofNullable(savedGenre.getSubGenres())
+        response.setSubGenres(Optional.ofNullable(savedGenre.getSubGenres())
                         .orElseGet(Collections::emptyList)
                         .stream()
                         .filter(Genre::getActive)
                         .map(this::toDTO)
                         .toList());
     }
-//    public Genre updateEntityFromDto(Genre existingGenre, GenreDTO dto) {
-//
-//    }
 }

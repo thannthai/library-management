@@ -1,28 +1,28 @@
 package com.thanh.librarymanagementsystem.service;
 
-import com.thanh.librarymanagementsystem.model.Genre;
-import com.thanh.librarymanagementsystem.payload.dto.GenreDTO;
+import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 //
 public interface GenreService {
-    GenreDTO createGenre(GenreDTO genreDTO);
+    GenreResponse createGenre(GenreRequest genreDTO);
 
-    List<GenreDTO> getAllGenres();
+    List<GenreResponse> getAllGenres();
 
-    GenreDTO getGenreByCode(String code);
+    GenreResponse getGenreByCode(String code);
 
-    GenreDTO updateGenre(Long genreId, GenreDTO genre);
+    GenreResponse updateGenre(Long genreId, GenreRequest genre);
 
     void deleteGenre(Long genreId);
 
     void hardDeleteGenre(Long genreId);
 
-    List<GenreDTO> getAllActiveGenresWithSubGenres();
+    List<GenreResponse> getAllActiveGenresWithSubGenres();
 
-    List<GenreDTO> getTopLevelGenres();
+    List<GenreResponse> getTopLevelGenres();
 
     //Page<GenreDTO> searchGenres(String searchTerm, Pageable pageable);
 

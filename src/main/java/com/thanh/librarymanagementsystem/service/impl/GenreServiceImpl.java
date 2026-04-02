@@ -3,7 +3,8 @@ package com.thanh.librarymanagementsystem.service.impl;
 import com.thanh.librarymanagementsystem.exception.GenreException;
 import com.thanh.librarymanagementsystem.mapper.GenreMapper;
 import com.thanh.librarymanagementsystem.model.Genre;
-import com.thanh.librarymanagementsystem.payload.dto.GenreDTO;
+import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import com.thanh.librarymanagementsystem.repository.GenreRepository;
 import com.thanh.librarymanagementsystem.service.GenreService;
 import lombok.RequiredArgsConstructor;
@@ -18,28 +19,28 @@ public class GenreServiceImpl implements GenreService {
     private final GenreMapper mapper;
 
     @Override
-    public GenreDTO createGenre(GenreDTO genreDTO) {
+    public GenreResponse createGenre(GenreRequest genreDTO) {
         Genre genre = mapper.toEntity(genreDTO);
         Genre savedGenre = repository.save(genre);
         return mapper.toDTO(savedGenre);
     }
 
     @Override
-    public List<GenreDTO> getAllGenres() {
+    public List<GenreResponse> getAllGenres() {
         return repository.findAll().stream()
                 .map(mapper::toDTO)
                 .toList();
     }
 
     @Override
-    public GenreDTO getGenreByCode(String code) {
+    public GenreResponse getGenreByCode(String code) {
         return repository.findByCode(code)
                 .map(mapper::toDTO)
                 .orElseThrow(() -> new GenreException("Not found!"));
     }
 
     @Override
-    public GenreDTO updateGenre(Long genreId, GenreDTO genre) {
+    public GenreResponse updateGenre(Long genreId, GenreRequest genre) {
         Genre existingGenre = repository.findById(genreId).orElseThrow(() -> new GenreException("Not found!"));
         mapper.updateEntity(genre, existingGenre);
 
@@ -62,13 +63,13 @@ public class GenreServiceImpl implements GenreService {
     }
 
     @Override
-    public List<GenreDTO> getAllActiveGenresWithSubGenres() {
+    public List<GenreResponse> getAllActiveGenresWithSubGenres() {
         List<Genre> genres = repository.findByActiveTrueOrderByDisplayOrderAsc();
         return mapper.toDTO(genres);
     }
 
     @Override
-    public List<GenreDTO> getTopLevelGenres() {
+    public List<GenreResponse> getTopLevelGenres() {
         List<Genre> genres = repository.findByParentGenreIsNullAndActiveTrueOrderByDisplayOrderAsc();
         return mapper.toDTO(genres);
     }

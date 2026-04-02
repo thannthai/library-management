@@ -4,16 +4,16 @@ import org.mapstruct.*;
 
 import java.util.List;
 
-public interface EntityMapper<D, E> {
-    E toEntity(D d);
+public interface BaseMapper<REQ, RES, ENTITY> {
+    ENTITY toEntity(REQ d);
 
-    D toDTO(E e);
+    RES toDTO(ENTITY e);
 
-    List<E> toEntity(List<D> d);
+    List<ENTITY> toEntity(List<REQ> d);
 
-    List<D> toDTO(List<E> e);
+    List<RES> toDTO(List<ENTITY> e);
 
     @Mapping(target = "id", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateEntity(D dto, @MappingTarget E entity);
+    void updateEntity(REQ dto, @MappingTarget ENTITY entity);
 }

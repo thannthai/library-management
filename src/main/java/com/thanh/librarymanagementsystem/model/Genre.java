@@ -3,12 +3,8 @@ package com.thanh.librarymanagementsystem.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,35 +14,28 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Genre  {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @NotBlank(message = "Genre Code is required")
+public class Genre extends BaseEntity  {
+    @NotBlank(message = "Code missing")
+    @Column(unique = true, nullable = false, length = 50)
     private String code;
 
-    @NotBlank(message = "Genre Name is required")
+    @NotBlank(message = "Name missing")
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Size(max = 500, message = "Length must not exceed 500 characters")
+    @Column(length = 500)
     private String description;
 
-    @Min(value = 0, message = "Display order cannot be negative")
+    @Min(value = 0)
     private Integer displayOrder;
 
     @Column(nullable = false)
     private Boolean active = true;
 
     @ManyToOne
+    @JoinColumn(name = "parent_id")
     private Genre parentGenre;
 
     @OneToMany(mappedBy="parentGenre")
     private List<Genre> subGenres = new ArrayList<>();
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

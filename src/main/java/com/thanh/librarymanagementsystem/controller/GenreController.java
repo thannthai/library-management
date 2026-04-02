@@ -1,6 +1,7 @@
 package com.thanh.librarymanagementsystem.controller;
 
-import com.thanh.librarymanagementsystem.payload.dto.GenreDTO;
+import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import com.thanh.librarymanagementsystem.payload.response.ApiResponse;
 import com.thanh.librarymanagementsystem.service.GenreService;
 import jakarta.validation.Valid;
@@ -18,23 +19,23 @@ public class GenreController {
     private final GenreService service;
 
     @PostMapping()
-    public ResponseEntity<ApiResponse<GenreDTO>> addGenre(@Valid @RequestBody GenreDTO genreDTO) {
+    public ResponseEntity<ApiResponse<GenreResponse>> addGenre(@Valid @RequestBody GenreRequest genreDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("Genre is created Successfully", true, service.createGenre(genreDTO)));
     }
 
     @GetMapping()
-    public ResponseEntity<ApiResponse<List<GenreDTO>>> getAllGenres() {
+    public ResponseEntity<ApiResponse<List<GenreResponse>>> getAllGenres() {
         return ResponseEntity.ok(new ApiResponse<>("Genres are retrieved successfully", true, service.getAllGenres()));
     }
 
     @GetMapping("/code/{code}")
-    public ResponseEntity<ApiResponse<GenreDTO>> getGenreByCode(@PathVariable String code) {
+    public ResponseEntity<ApiResponse<GenreResponse>> getGenreByCode(@PathVariable String code) {
         return ResponseEntity.ok(new ApiResponse<>("Genre is retrieved successfully", true, service.getGenreByCode(code)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<GenreDTO>> updateGenre(@PathVariable Long id, @Valid @RequestBody GenreDTO dto) {
+    public ResponseEntity<ApiResponse<GenreResponse>> updateGenre(@PathVariable Long id, @Valid @RequestBody GenreRequest dto) {
         return ResponseEntity.ok(new ApiResponse<>("Genre is updated successfully", true, service.updateGenre(id, dto)));
     }
 
@@ -51,7 +52,7 @@ public class GenreController {
     }
 
     @GetMapping("/top-level")
-    public ResponseEntity<ApiResponse<List<GenreDTO>>> getTopLevelGenres() {
+    public ResponseEntity<ApiResponse<List<GenreResponse>>> getTopLevelGenres() {
         return ResponseEntity.ok(new ApiResponse<>("Genres retrieved successfully", true, service.getTopLevelGenres()));
     }
 
