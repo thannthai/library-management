@@ -3,7 +3,7 @@ package com.thanh.librarymanagementsystem.service.impl;
 import com.thanh.librarymanagementsystem.exception.GenreException;
 import com.thanh.librarymanagementsystem.mapper.GenreMapper;
 import com.thanh.librarymanagementsystem.model.Genre;
-import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.response.GenreResponse;
 import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import com.thanh.librarymanagementsystem.repository.GenreRepository;
 import com.thanh.librarymanagementsystem.service.GenreService;

@@ -38,4 +38,7 @@ public class Genre extends BaseEntity  {
 
     @OneToMany(mappedBy="parentGenre")
     private List<Genre> subGenres = new ArrayList<>();
+
+    @ManyToMany(mappedBy = "genres")
+    private List<Book> books;
 }

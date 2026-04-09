@@ -1,6 +1,6 @@
 package com.thanh.librarymanagementsystem.controller;
 
-import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.response.GenreResponse;
 import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import com.thanh.librarymanagementsystem.payload.response.ApiResponse;
 import com.thanh.librarymanagementsystem.service.GenreService;

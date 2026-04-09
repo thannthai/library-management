@@ -2,7 +2,7 @@ package com.thanh.librarymanagementsystem.mapper;
 
 import com.thanh.librarymanagementsystem.exception.GenreException;
 import com.thanh.librarymanagementsystem.model.Genre;
-import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.response.GenreResponse;
 import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import com.thanh.librarymanagementsystem.repository.GenreRepository;
 import org.mapstruct.AfterMapping;

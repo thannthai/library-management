@@ -1,4 +1,4 @@
-package com.thanh.librarymanagementsystem.payload.dto;
+package com.thanh.librarymanagementsystem.payload.response;
 
 import lombok.*;
 

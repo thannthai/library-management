@@ -1,6 +1,6 @@
 package com.thanh.librarymanagementsystem.service;
 
-import com.thanh.librarymanagementsystem.payload.dto.GenreResponse;
+import com.thanh.librarymanagementsystem.payload.response.GenreResponse;
 import com.thanh.librarymanagementsystem.payload.request.GenreRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
