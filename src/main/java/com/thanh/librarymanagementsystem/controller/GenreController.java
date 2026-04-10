@@ -42,13 +42,13 @@ public class GenreController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteGenre(@PathVariable Long id) {
         service.deleteGenre(id);
-        return ResponseEntity.ok(new ApiResponse<>("Genre is soft-deleted", true, null));
+        return ResponseEntity.ok(new ApiResponse<>("Genre is soft-deleted", true));
     }
 
     @DeleteMapping("/{id}/hardDelete")
     public ResponseEntity<ApiResponse<Void>> hardDeleteGenre(@PathVariable Long id) {
         service.hardDeleteGenre(id);
-        return ResponseEntity.ok(new ApiResponse<>("Genre is deleted successfully", true, null));
+        return ResponseEntity.ok(new ApiResponse<>("Genre is deleted successfully", true));
     }
 
     @GetMapping("/top-level")

@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -31,7 +32,7 @@ public class Book extends BaseEntity {
             joinColumns = @JoinColumn(name = "book_id"),
             inverseJoinColumns = @JoinColumn(name = "author_id")
     )
-    private List<Author> authors;
+    private List<Author> authors = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(
@@ -39,9 +40,9 @@ public class Book extends BaseEntity {
             joinColumns = @JoinColumn(name = "book_id"),
             inverseJoinColumns = @JoinColumn(name = "genre_id")
     )
-    private List<Genre> genres;
+    private List<Genre> genres = new ArrayList<>();
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "publisher_id")
     private Publisher publisher;
 

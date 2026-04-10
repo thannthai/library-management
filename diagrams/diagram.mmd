@@ -1,0 +1,47 @@
+erDiagram
+    Genre {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR(50) code "UNIQUE, NOT NULL"
+        VARCHAR(255) name "NOT NULL"
+        VARCHAR(500) description
+        INT display_order "DEFAULT 0"
+        BOOLEAN active "DEFAULT TRUE"
+        BIGINT parent_id FK
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    Genre |o--o{ Genre : "has sub-genres"
+
+    Book {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR(20) isbn "UNIQUE, NOTNULL"
+        VARCHAR(255) title "NOTNULL"
+        BIGINT author_id FK "NOTNULL"
+        BIGINT genre_id FK "NOTNULL"
+        BIGINT publisher_id FK "NOTNULL"
+        DATETIME publication_date
+        VARCHAR(20) language
+        INT pages
+        TEXT description
+        INT total_copies "DEFAULT 0"
+        INT available_copies "DEFAULT 0, MAX <= totalCopies"
+        DECIMAL price
+        VARCHAR(500) cover_image_url
+        BOOLEAN active "DEFAULT TRUE"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    Author {
+        BIGINT id PK "AUTO_INCREMENT"
+        varchar(255) name
+    }
+
+    Publisher {
+        BIGINT id PK "AUTO_INCREMENT"
+        varchar(100) name
+    }
+    Author }|--o{ Book : "writes"
+    Genre }|--o{ Book : "categorizes"
+    Publisher |o--o{ Book : "publishes"
+

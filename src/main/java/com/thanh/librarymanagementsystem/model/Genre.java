@@ -40,5 +40,5 @@ public class Genre extends BaseEntity  {
     private List<Genre> subGenres = new ArrayList<>();
 
     @ManyToMany(mappedBy = "genres")
-    private List<Book> books;
+    private List<Book> books = new ArrayList<>();
 }
