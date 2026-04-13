@@ -3,8 +3,8 @@ spring:
     name: Library-Management-System
 
   datasource:
-    url: jdbc:mysql://localhost:3306/library_db
-    username: ${DB_USERNAME}
+    url: jdbc:mysql://localhost:3306/library_management
+    username: root
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -18,8 +18,7 @@ spring:
         query:
           fail_on_pagination_over_collection_fetch: true
 
-
 google:
   books:
-    api-key: ${API_KEY}
+    api-key: ${GOOGLE_BOOKS_API_KEY}
     base-url: https://www.googleapis.com/books/v1/volumes
