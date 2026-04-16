@@ -9,7 +9,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+// JPA annotation - Tell Hibernate this is not a table, brings all attributes assign to child class
 @MappedSuperclass
+// Must active JpaAuditing in JpaConfig.java
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
