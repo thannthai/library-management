@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,12 +23,14 @@ public class BookController {
     private final BookService service;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BookResponse>> createBook(@Valid @RequestBody BookRequest bookDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("Book created successfully", true, service.createBook(bookDTO)));
     }
 
     @PostMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<BookResponse>>> createBooksBulk(@Valid @RequestBody List<BookRequest> bookDTOs) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("Books created in bulk successfully", true, service.createBooksBulk(bookDTOs)));
@@ -44,17 +47,20 @@ public class BookController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BookResponse>> updateBook(@PathVariable Long id, @Valid @RequestBody BookRequest bookDTO) {
         return ResponseEntity.ok(new ApiResponse<>("Book updated successfully", true, service.updateBook(id, bookDTO)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> softDeleteBook(@PathVariable Long id) {
         service.softDeleteBook(id);
         return ResponseEntity.ok(new ApiResponse<>("Book deleted softly", true));
     }
 
     @DeleteMapping("/{id}/permanent")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> hardDeleteBook(@PathVariable Long id) {
         service.hardDeleteBook(id);
         return ResponseEntity.ok(new ApiResponse<>("Book deleted permanently", true));
@@ -66,6 +72,7 @@ public class BookController {
     }
 
     @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BookStatsResponse>> getBookStats() {
         long totalActive = service.getTotalActiveBooks();
         long totalAvailable = service.getTotalAvailableBooks();

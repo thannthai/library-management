@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,13 +19,14 @@ import java.util.List;
 public class GenreController {
     private final GenreService service;
 
-    @PostMapping()
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<GenreResponse>> addGenre(@Valid @RequestBody GenreRequest genreDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("Genre is created Successfully", true, service.createGenre(genreDTO)));
     }
 
-    @GetMapping()
+    @GetMapping
     public ResponseEntity<ApiResponse<List<GenreResponse>>> getAllGenres() {
         return ResponseEntity.ok(new ApiResponse<>("Genres are retrieved successfully", true, service.getAllGenres()));
     }
@@ -35,17 +37,20 @@ public class GenreController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<GenreResponse>> updateGenre(@PathVariable Long id, @Valid @RequestBody GenreRequest dto) {
         return ResponseEntity.ok(new ApiResponse<>("Genre is updated successfully", true, service.updateGenre(id, dto)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteGenre(@PathVariable Long id) {
         service.deleteGenre(id);
         return ResponseEntity.ok(new ApiResponse<>("Genre is soft-deleted", true));
     }
 
     @DeleteMapping("/{id}/hardDelete")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> hardDeleteGenre(@PathVariable Long id) {
         service.hardDeleteGenre(id);
         return ResponseEntity.ok(new ApiResponse<>("Genre is deleted successfully", true));
