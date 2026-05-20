@@ -13,7 +13,6 @@ import com.thanh.librarymanagementsystem.payload.response.PublisherResponse;
 import com.thanh.librarymanagementsystem.repository.AuthorRepository;
 import com.thanh.librarymanagementsystem.repository.GenreRepository;
 import com.thanh.librarymanagementsystem.repository.PublisherRepository;
-import lombok.RequiredArgsConstructor;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
@@ -24,7 +23,6 @@ import java.util.List;
 import java.util.Optional;
 
 @Mapper(componentModel = "spring")
-@RequiredArgsConstructor
 public abstract class BookMapper implements BaseMapper<BookRequest, BookResponse, Book> {
     @Autowired
     protected AuthorRepository authorRepository;
