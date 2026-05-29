@@ -1,5 +1,6 @@
 package com.thanh.librarymanagementsystem.controller;
 
+import com.thanh.librarymanagementsystem.mapper.UserMapper;
 import com.thanh.librarymanagementsystem.payload.response.ApiResponse;
 import com.thanh.librarymanagementsystem.payload.response.UserResponse;
 import com.thanh.librarymanagementsystem.service.UserService;
@@ -18,9 +19,11 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
 
+    private final UserMapper userMapper;
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
-        return ResponseEntity.ok(new ApiResponse<>("Current user retrieved successfully", true, userService.getCurrentUser()));
+        return ResponseEntity.ok(new ApiResponse<>("Current user retrieved successfully", true, userMapper.toDTO(userService.getCurrentUser())));
     }
 
     @GetMapping("/list")

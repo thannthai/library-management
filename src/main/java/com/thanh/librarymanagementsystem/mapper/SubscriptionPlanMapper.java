@@ -6,6 +6,4 @@ import com.thanh.librarymanagementsystem.payload.response.SubscriptionPlanRespon
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
-public abstract class SubscriptionPlanMapper implements BaseMapper<SubscriptionPlanRequest, SubscriptionPlanResponse, SubscriptionPlan> {
-
-}
+public abstract class SubscriptionPlanMapper implements BaseMapper<SubscriptionPlanRequest, SubscriptionPlanResponse, SubscriptionPlan> {}

@@ -2,10 +2,11 @@ package com.thanh.librarymanagementsystem.service.impl;
 
 import com.thanh.librarymanagementsystem.exception.SubscriptionPlanException;
 import com.thanh.librarymanagementsystem.mapper.SubscriptionPlanMapper;
+import com.thanh.librarymanagementsystem.mapper.UserMapper;
 import com.thanh.librarymanagementsystem.model.SubscriptionPlan;
+import com.thanh.librarymanagementsystem.model.User;
 import com.thanh.librarymanagementsystem.payload.request.SubscriptionPlanRequest;
 import com.thanh.librarymanagementsystem.payload.response.SubscriptionPlanResponse;
-import com.thanh.librarymanagementsystem.payload.response.UserResponse;
 import com.thanh.librarymanagementsystem.repository.SubscriptionPlanRepository;
 import com.thanh.librarymanagementsystem.service.SubscriptionPlanService;
 import com.thanh.librarymanagementsystem.service.UserService;
@@ -18,6 +19,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SubscriptionPlanImpl implements SubscriptionPlanService {
     private final SubscriptionPlanMapper subscriptionPlanMapper;
+    private final UserMapper userMapper;
+
     private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     private final UserService userService;
@@ -28,11 +31,11 @@ public class SubscriptionPlanImpl implements SubscriptionPlanService {
             throw new SubscriptionPlanException("Subscription plan code already exists: " + request.getPlanCode());
         }
 
-        UserResponse currentUser = userService.getCurrentUser();
+        User currentUser = userService.getCurrentUser();
 
         SubscriptionPlan subscriptionPlan = subscriptionPlanMapper.toEntity(request);
-        subscriptionPlan.setCreatedBy(currentUser.getFullName());
-        subscriptionPlan.setUpdatedBy(currentUser.getFullName());
+        subscriptionPlan.setCreatedBy(currentUser.getUserProfiles().getFullName());
+        subscriptionPlan.setUpdatedBy(currentUser.getUserProfiles().getFullName());
 
         SubscriptionPlan savedSubscriptionPlan = subscriptionPlanRepository.save(subscriptionPlan);
 

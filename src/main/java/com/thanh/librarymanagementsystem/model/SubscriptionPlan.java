@@ -20,7 +20,7 @@ public class SubscriptionPlan extends BaseEntity {
     private String planCode;
 
     @Column(nullable = false, length = 100)
-    private String name;
+    private String planName;
 
     private String description;
 

@@ -31,4 +31,10 @@ public class GlobalException {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(e.getMessage(), false));
     }
+
+    @ExceptionHandler(SubscriptionException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSubscriptionException(SubscriptionException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(e.getMessage(), false));
+    }
 }

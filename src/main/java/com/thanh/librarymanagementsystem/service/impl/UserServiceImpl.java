@@ -21,7 +21,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
 
     @Override
-    public UserResponse getCurrentUser() {
+    public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -30,10 +30,8 @@ public class UserServiceImpl implements UserService {
 
         String email = authentication.getName();
 
-        User currentUser = userRepository.findByEmail(email)
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserException("User account not found in system"));
-
-        return userMapper.toDTO(currentUser);
     }
 
     @Override
