@@ -1,6 +1,6 @@
 package com.thanh.librarymanagementsystem.service.impl;
 
-import com.thanh.librarymanagementsystem.domain.UserRole;
+import com.thanh.librarymanagementsystem.enums.UserRole;
 import com.thanh.librarymanagementsystem.exception.UserException;
 import com.thanh.librarymanagementsystem.mapper.UserMapper;
 import com.thanh.librarymanagementsystem.model.PasswordResetToken;
@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -41,8 +42,6 @@ public class AuthServiceImpl implements AuthService {
     private final JwtProvider jwtProvider;
 
     private final UserMapper userMapper;
-
-    private final CustomUserDetailsService customUserDetailsService;
 
     private final AuthenticationManager authenticationManager;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -130,24 +129,46 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserException("User not found"));
 
+        // Rate-limit check: lấy token mới nhất (nếu có) và đảm bảo user không gửi yêu cầu quá nhanh
+        Optional<PasswordResetToken> lastToken = passwordResetTokenRepository.findFirstByUserIdOrderByCreatedAtDesc(user.getId());
+        if (lastToken.isPresent()) {
+            // Lấy thời điểm token được tạo (stored directly in createdAt field)
+            LocalDateTime lastTokenCreatedAt = lastToken.get().getCreatedAt();
+
+            // Nếu token được tạo cách đây chưa đến 2 phút, từ chối yêu cầu
+            if (lastTokenCreatedAt.plusMinutes(2).isAfter(LocalDateTime.now())) {
+                throw new UserException("Vui lòng đợi 2 phút trước khi yêu cầu lại gửi mã!");
+            }
+        }
+
+        // Xóa token cũ của user này (nếu có) trước tạo token mới
+        passwordResetTokenRepository.deleteByUser(user);
+
         String token = UUID.randomUUID().toString();
 
-        PasswordResetToken passwordResetToken = new PasswordResetToken().builder()
+        PasswordResetToken passwordResetToken = PasswordResetToken.builder()
                 .token(token)
                 .user(user)
+                .createdAt(LocalDateTime.now())
                 .expiryDate(LocalDateTime.now().plusMinutes(5))
                 .build();
         passwordResetTokenRepository.save(passwordResetToken);
 
         String resetLink = frontendUrl + token;
         String subject = "Password Reset Request";
-        String body = "Click the link to reset your password (Valid 5 minutes): " + resetLink;
+
+        String body = String.format(
+                "<h3>Yêu cầu khôi phục mật khẩu</h3>" +
+                        "<p>Vui lòng click vào đường link bên dưới để đặt lại mật khẩu (Hiệu lực trong 5 phút):</p>" +
+                        "<a href='%s' style='padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;'>Đặt lại mật khẩu</a>",
+                resetLink
+        );
 
         emailService.sendEmail(user.getEmail(), subject, body);
     }
 
-
     @Override
+    @Transactional
     public void resetPassword(String token, String newPassword) {
         PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new UserException("Invalid token"));
@@ -157,9 +178,18 @@ public class AuthServiceImpl implements AuthService {
             throw new UserException("Token expired");
         }
 
+        // Kiểm tra password strength
+        if (!isPasswordStrong(newPassword)) {
+            throw new UserException("Password must contain uppercase, lowercase, digit, special char");
+        }
+
         User user = passwordResetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         passwordResetTokenRepository.delete(passwordResetToken);
+    }
+
+    private boolean isPasswordStrong(String password) {
+        return password.matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$");
     }
 }

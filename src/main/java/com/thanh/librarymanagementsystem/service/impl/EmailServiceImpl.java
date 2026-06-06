@@ -25,12 +25,12 @@ public class EmailServiceImpl implements EmailService {
             mimeMessageHelper.setTo(to);
             mimeMessageHelper.setSubject(subject);
             mimeMessageHelper.setText(body, true);
-        } catch (MailException e) {
-            throw new MailSendException("Failed to send email");
-        } catch (MessagingException e) {
-            throw new RuntimeException(e);
-        }
 
-        javaMailSender.send(mimeMessage);
+            javaMailSender.send(mimeMessage);
+        } catch (MailException e) {
+            throw new MailSendException("Failed to send email " + e.getMessage());
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to create email message " + e.getMessage());
+        }
     }
 }

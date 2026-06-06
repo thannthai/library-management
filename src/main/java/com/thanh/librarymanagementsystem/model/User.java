@@ -1,7 +1,7 @@
 package com.thanh.librarymanagementsystem.model;
 
-import com.thanh.librarymanagementsystem.domain.AuthProvider;
-import com.thanh.librarymanagementsystem.domain.UserRole;
+import com.thanh.librarymanagementsystem.enums.AuthProvider;
+import com.thanh.librarymanagementsystem.enums.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

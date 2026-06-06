@@ -7,8 +7,11 @@ import com.thanh.librarymanagementsystem.payload.request.SignUpRequest;
 import com.thanh.librarymanagementsystem.payload.response.ApiResponse;
 import com.thanh.librarymanagementsystem.payload.response.AuthResponse;
 import com.thanh.librarymanagementsystem.service.AuthService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
@@ -27,8 +30,27 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
-        return ResponseEntity.ok(new ApiResponse<>("User logged in successfully", true, authService.login(loginRequest)));
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletResponse response) {
+        // 1. Xác thực & lấy token từ AuthService
+        AuthResponse authResponse = authService.login(loginRequest);
+
+        // Tính toán thời gian sống
+        long cookieAgeInSeconds = 24 * 60 * 60;
+
+        // 2. Đóng gói token vào ResponseCookie chuẩn chính chủ Spring Boot
+        ResponseCookie cookie = ResponseCookie.from("accessToken", authResponse.getJwt())
+                .httpOnly(true)
+                .secure(false) // Để false để test mượt ở localhost HTTP
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(cookieAgeInSeconds) // Khớp thời gian với lõi token
+                .build();
+
+        // 3. Đính cookie vào Header phản hồi
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        // 4. Trả về response (không chứa token trong body vì đã gửi qua cookie)
+        return ResponseEntity.ok(new ApiResponse<>("User logged in successfully", true, authResponse.getUserResponse()));
     }
 
     @PostMapping("/forgot-password")

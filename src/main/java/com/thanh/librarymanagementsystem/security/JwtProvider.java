@@ -4,15 +4,13 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.Key;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,22 +19,11 @@ import java.util.stream.Collectors;
 
 @Component
 public class JwtProvider {
-    String secretKey = "";
+    @Value("${jwt.secret-key}")
+    private String secretKey;
 
-    public JwtProvider() {
-        try {
-            // 1. Chế tạo một cái khuôn dùng chuẩn mã hóa HmacSHA256
-            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
-
-            // 2. Đúc ra một cái chìa khóa thực sự (Dữ liệu dạng nhị phân)
-            SecretKey sk = keyGen.generateKey();
-
-            // 3. Vì nhị phân rất khó đọc, nên ta phải dịch nó sang dạng chuỗi chữ/số (Base64) rồi lưu vào biến secretKey ở đầu class
-            secretKey = Base64.getEncoder().encodeToString(sk.getEncoded());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e); // Nếu Java không hỗ trợ chuẩn mã hóa kia thì báo lỗi
-        }
-    }
+    @Value("${jwt.expiration}")
+    private long expiration;
 
     public String generateToken(UserDetails userDetails) {
         String authorities = userDetails.getAuthorities().stream()
@@ -47,10 +34,10 @@ public class JwtProvider {
         claims.put("authorities", authorities);
 
         return Jwts.builder()
-                .claims().add(claims) // Nạp thông tin phụ vào thẻ
-                .subject(userDetails.getUsername()) // Điền tên chủ thẻ (Email)
-                .issuedAt(new Date(System.currentTimeMillis())) // In ngày cấp (Hiện tại)
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 30)) // In ngày hết hạn (+30 tiếng)
+                .claims().add(claims)
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
                 .and()
                 .signWith(getKey()) // QUAN TRỌNG NHẤT: Đóng cái "con dấu" của bạn lên thẻ
                 .compact(); // Nén tất cả lại thành 1 chuỗi dài ngoằng (Token)

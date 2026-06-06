@@ -1,4 +1,4 @@
-package com.thanh.librarymanagementsystem.domain;
+package com.thanh.librarymanagementsystem.enums;
 
 public enum AuthProvider {
     LOCAL,

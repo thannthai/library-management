@@ -1,6 +1,6 @@
 package com.thanh.librarymanagementsystem.payload.response;
 
-import com.thanh.librarymanagementsystem.domain.UserRole;
+import com.thanh.librarymanagementsystem.enums.UserRole;
 import lombok.*;
 
 import java.util.Set;

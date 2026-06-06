@@ -2,6 +2,7 @@ package com.thanh.librarymanagementsystem.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,15 +26,26 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-            username = jwtProvider.extractUserName(token);
+        // 1. Lấy toàn bộ danh sách Cookies từ trình duyệt gửi lên
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies != null) {
+            // 2. Duyệt tìm chiếc cookie mang tên "accessToken"
+            for (Cookie cookie : cookies) {
+                if ("accessToken".equals(cookie.getName())) {
+                    token = cookie.getValue(); // Bốc chuỗi JWT ra
+                    if (token != null && !token.isEmpty()) {
+                        username = jwtProvider.extractUserName(token); // Giải mã lấy username
+                    }
+                    break;
+                }
+            }
         }
 
+        // 3. Toàn bộ đoạn logic kiểm tra username và nạp vào SecurityContextHolder
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = context.getBean(CustomUserDetailsService.class).loadUserByUsername(username);
 
