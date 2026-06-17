@@ -37,3 +37,7 @@ build/
 
 # Local environment variables
 .env
+
+# AI Agents and Skills
+.agents/
+**/.agents/

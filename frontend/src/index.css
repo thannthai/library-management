@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/*
+  BookNest — Global CSS
+  Custom base styles must stay inside Tailwind's base layer.
+  In Tailwind v4, unlayered CSS outranks utility classes and can override
+  spacing utilities such as px-6, py-20, mx-auto.
+*/
+
+@layer base {
+  /* ─── Reset ────────────────────────────────────────────────────────────── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #1e293b;
+    background: #ffffff;
+    overflow-x: hidden;
+  }
+
+  /* Xóa hoàn toàn mọi ràng buộc Vite default trên #root */
+  #root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    border: none;
+    display: block;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', system-ui, sans-serif;
+    line-height: 1.2;
+  }
+
+  a { text-decoration: none; }
+  button { font-family: inherit; }
+  input, textarea, select { font-family: inherit; }
+
+  /* ─── Scrollbar ────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  ::selection { background: #e0e7ff; color: #4f46e5; }
+  :focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; border-radius: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

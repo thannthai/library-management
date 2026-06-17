@@ -9,5 +9,24 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - booknest-network
+
+  redis:
+    image: redis:alpine
+    container_name: library-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --notify-keyspace-events Ex
+    volumes:
+      - redis_data:/data
+    networks:
+      - booknest-network
+
 volumes:
   mysql_data:
+  redis_data:
+
+networks:
+  booknest-network:
+    driver: bridge
