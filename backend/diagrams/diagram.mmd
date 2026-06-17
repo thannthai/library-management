@@ -1,0 +1,138 @@
+erDiagram
+    User {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR email "UNIQUE, NOT NULL"
+        VARCHAR password
+        BIGINT user_profiles_id FK "ONE_TO_ONE"
+        VARCHAR auth_provider "ENUM: LOCAL, GOOGLE"
+        VARCHAR google_id
+        BOOLEAN verified "DEFAULT FALSE"
+        DATETIME last_login
+        DATETIME created_at "NOT NULL"
+        DATETIME updated_at "NOT NULL"
+    }
+
+    UserProfiles {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR full_name
+        VARCHAR phone "UNIQUE"
+        VARCHAR profile_image
+        DATETIME created_at "NOT NULL"
+        DATETIME updated_at "NOT NULL"
+    }
+
+    UserRole {
+        BIGINT user_id FK "NOT NULL"
+        VARCHAR roles "ENUM: ROLE_ADMIN, ROLE_USER"
+    }
+
+    PasswordResetToken {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR token "UNIQUE, NOT NULL"
+        BIGINT user_id FK "NOT NULL"
+        DATETIME expiry_date "NOT NULL"
+    }
+
+    Author {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR name "NOT NULL"
+    }
+
+    Publisher {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR name "NOT NULL"
+    }
+
+    Genre {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR code "UNIQUE, NOT NULL, length 50"
+        VARCHAR name "NOT NULL, length 100"
+        VARCHAR description "length 500"
+        INT display_order "MIN 0"
+        BOOLEAN active "DEFAULT TRUE, NOT NULL"
+        BIGINT parent_id FK
+        DATETIME created_at "NOT NULL"
+        DATETIME updated_at "NOT NULL"
+    }
+
+    Book {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR isbn "UNIQUE, NOT NULL"
+        VARCHAR title "NOT NULL"
+        BIGINT publisher_id FK "NOT NULL"
+        DATE publication_date
+        VARCHAR language "length 20"
+        INT pages
+        VARCHAR description "length 2000"
+        INT total_copies "MIN 0"
+        INT available_copies "MAX <= total_copies"
+        DECIMAL price "NOT NULL"
+        VARCHAR cover_image_url "length 500"
+        BOOLEAN active "DEFAULT TRUE, NOT NULL"
+        DATETIME created_at "NOT NULL"
+        DATETIME updated_at "NOT NULL"
+    }
+
+    BookAuthor {
+        BIGINT book_id FK "NOT NULL"
+        BIGINT author_id FK "NOT NULL"
+    }
+
+    BookGenre {
+        BIGINT book_id FK "NOT NULL"
+        BIGINT genre_id FK "NOT NULL"
+    }
+
+    SubscriptionPlan {
+        BIGINT id PK "AUTO_INCREMENT"
+        VARCHAR plan_code "UNIQUE, NOT NULL"
+        VARCHAR plan_name "NOT NULL, length 100"
+        VARCHAR description
+        DECIMAL price "NOT NULL, POSITIVE"
+        INT duration_in_days "NOT NULL"
+        INT max_books_allowed "NOT NULL, POSITIVE"
+        INT max_days_allowed "NOT NULL, POSITIVE"
+        INT max_days_per_book "NOT NULL, POSITIVE"
+        INT display_order "DEFAULT 0"
+        BOOLEAN is_active "DEFAULT TRUE"
+        BOOLEAN is_featured "DEFAULT FALSE"
+        VARCHAR badge_text
+        VARCHAR admin_notes
+        VARCHAR created_by
+        VARCHAR updated_by
+        DATETIME created_at "NOT NULL"
+        DATETIME updated_at "NOT NULL"
+    }
+
+    Subscription {
+        BIGINT id PK "AUTO_INCREMENT"
+        BIGINT user_id FK "NOT NULL"
+        BIGINT subscription_plan_id FK "NOT NULL"
+        VARCHAR plan_name
+        VARCHAR plan_code
+        DECIMAL price
+        INT max_books_allowed "NOT NULL"
+        INT max_days_per_book "NOT NULL"
+        DATETIME start_date "NOT NULL"
+        DATETIME end_date "NOT NULL"
+        BOOLEAN is_active "DEFAULT TRUE, NOT NULL"
+        BOOLEAN auto_renew "DEFAULT FALSE"
+        DATETIME cancelled_at
+        VARCHAR cancellation_reason
+        DATETIME created_at "NOT NULL"
+        DATETIME updated_at "NOT NULL"
+    }
+
+    User ||--o| UserProfiles : "has profile"
+    User ||--o{ UserRole : "has roles"
+    User ||--o{ PasswordResetToken : "requests reset"
+    User ||--o{ Subscription : "owns"
+
+    SubscriptionPlan ||--o{ Subscription : "defines"
+
+    Publisher ||--o{ Book : "publishes"
+    Book ||--o{ BookAuthor : "has authors"
+    Author ||--o{ BookAuthor : "writes"
+    Book ||--o{ BookGenre : "has genres"
+    Genre ||--o{ BookGenre : "categorizes"
+    Genre |o--o{ Genre : "has sub-genres"
