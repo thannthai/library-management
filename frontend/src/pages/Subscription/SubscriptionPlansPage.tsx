@@ -25,6 +25,8 @@ import {
   cancelSubscription,
 } from '../../api/subscriptionApi';
 import type { SubscriptionPlan, Subscription } from '../../types/subscription.types';
+import { simulatePayment } from '../../api/paymentsApi';
+import { toast } from 'react-hot-toast';
 
 // Helper to redirect to SePay payment gateway
 const redirectToCheckout = (checkoutFormUrl: string, params: Record<string, string>) => {
@@ -55,6 +57,8 @@ export default function SubscriptionPlansPage() {
   // Loading/submitting state for purchases
   const [purchasingPlanId, setPurchasingPlanId] = useState<number | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [checkoutData, setCheckoutData] = useState<any | null>(null);
+  const [simulating, setSimulating] = useState(false);
 
   // Cancellation modal state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -106,15 +110,8 @@ export default function SubscriptionPlansPage() {
 
       if (response.sePayCheckout) {
         // Redirection needed for payment
+        setCheckoutData(response);
         setRedirecting(true);
-
-        // Mimic brief loading screen then submit form
-        setTimeout(() => {
-          redirectToCheckout(
-            response.sePayCheckout!.checkoutFormUrl,
-            response.sePayCheckout!.params
-          );
-        }, 1200);
       } else {
         // Free plan or direct activation
         await loadData();
@@ -122,6 +119,24 @@ export default function SubscriptionPlansPage() {
     } catch (err: any) {
       alert(err.message || 'Đã xảy ra lỗi khi chọn gói thành viên.');
       setPurchasingPlanId(null);
+    }
+  };
+
+  const handleSimulatePayment = async () => {
+    if (!checkoutData || simulating) return;
+    setSimulating(true);
+    try {
+      const txnRef = checkoutData.txnRef;
+      await simulatePayment(txnRef);
+      toast.success('🎉 Kích hoạt gói VIP thành công!');
+      setRedirecting(false);
+      setCheckoutData(null);
+      setPurchasingPlanId(null);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Giả lập thanh toán gói VIP thất bại.');
+    } finally {
+      setSimulating(false);
     }
   };
 
@@ -199,20 +214,90 @@ export default function SubscriptionPlansPage() {
     <DashboardLayout pageTitle="Subscriptions">
       {/* Redirection / Checkout Loading Overlay */}
       <AnimatePresence>
-        {redirecting && (
+        {redirecting && checkoutData && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-indigo-950/80 backdrop-blur-md z-[9999] flex flex-col items-center justify-center text-white"
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 text-white"
           >
-            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6 shadow-xl">
-              <CircleNotch size={36} className="animate-spin text-indigo-400" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">Đang kết nối tới cổng thanh toán...</h2>
-            <p className="text-sm text-indigo-200">
-              Bạn đang được chuyển hướng an toàn tới SePay để hoàn tất giao dịch.
-            </p>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md bg-slate-900 border border-indigo-500/35 rounded-3xl p-6 shadow-2xl relative"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setRedirecting(false);
+                  setCheckoutData(null);
+                  setPurchasingPlanId(null);
+                }}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all cursor-pointer text-slate-400 hover:text-white"
+              >
+                <X size={15} weight="bold" />
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-4 border border-indigo-500/20">
+                  <Crown size={28} className="text-indigo-400" />
+                </div>
+                
+                <h3 className="text-lg font-bold text-white mb-1">Thanh toán đăng ký hội viên</h3>
+                <p className="text-xs text-indigo-300 tracking-wider uppercase font-semibold mb-6">
+                  Giao dịch: {checkoutData.txnRef}
+                </p>
+
+                {/* Info Card */}
+                <div className="w-full bg-slate-950/60 border border-slate-800 rounded-2xl p-4 mb-6 text-sm text-slate-300 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Gói đăng ký:</span>
+                    <span className="font-semibold text-white">{checkoutData.planName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Số tiền thanh toán:</span>
+                    <span className="font-bold text-indigo-300">{formatVND(checkoutData.paymentAmount)}</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-400 mb-6 max-w-xs">
+                  Bạn có thể chọn đi tới cổng thanh toán thực tế của SePay (VietQR) hoặc giả lập thanh toán thành công trực tiếp tại đây.
+                </p>
+
+                {/* Actions */}
+                <div className="w-full space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      redirectToCheckout(
+                        checkoutData.sePayCheckout!.checkoutFormUrl,
+                        checkoutData.sePayCheckout!.params
+                      );
+                    }}
+                    className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950"
+                  >
+                    <span>Mở trang thanh toán SePay (Thực tế)</span>
+                    <ArrowRight size={14} weight="bold" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSimulatePayment}
+                    disabled={simulating}
+                    className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {simulating ? (
+                      <CircleNotch size={14} className="animate-spin" />
+                    ) : (
+                      <CheckCircle size={14} weight="bold" />
+                    )}
+                    <span>Giả lập thanh toán thành công (Thử nghiệm)</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

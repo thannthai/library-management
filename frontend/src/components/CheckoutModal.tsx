@@ -31,6 +31,7 @@ import {
   CircleNotch,
 } from '@phosphor-icons/react';
 import { getBookLoanById } from '../api/loansApi';
+import { simulatePayment } from '../api/paymentsApi';
 import type { SePayCheckout } from '../types/subscription.types';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export default function CheckoutModal({
     }
   });
   const [pollState, setPollState] = useState<'idle' | 'success' | 'expired'>('idle');
+  const [simulating, setSimulating] = useState(false);
 
   // Refs để clean up interval/timeout đúng cách ngay cả khi component unmount
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -203,6 +205,19 @@ export default function CheckoutModal({
     document.body.appendChild(form);
     form.submit();
     document.body.removeChild(form);
+  };
+
+  const handleSimulatePayment = async () => {
+    if (simulating) return;
+    setSimulating(true);
+    try {
+      const txnRef = sePayCheckout.description || sePayCheckout.params?.order_description || '';
+      await simulatePayment(txnRef);
+    } catch (err: any) {
+      alert(err.message || 'Giả lập thanh toán thất bại.');
+    } finally {
+      setSimulating(false);
+    }
   };
 
   return (
@@ -386,7 +401,7 @@ export default function CheckoutModal({
                 </div>
 
                 {/* Hoặc mở trang SePay */}
-                <div className="mb-5">
+                <div className="mb-3">
                   <button
                     type="button"
                     onClick={handleRedirectToSePay}
@@ -394,6 +409,23 @@ export default function CheckoutModal({
                   >
                     <span>Thanh toán qua cổng SePay (Thẻ/ATM/QR)</span>
                     <ArrowRight size={14} weight="bold" />
+                  </button>
+                </div>
+
+                {/* Giả lập thanh toán thành công (Thử nghiệm) */}
+                <div className="mb-5">
+                  <button
+                    type="button"
+                    onClick={handleSimulatePayment}
+                    disabled={simulating}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {simulating ? (
+                      <CircleNotch size={14} className="animate-spin" />
+                    ) : (
+                      <CheckCircle size={14} weight="bold" />
+                    )}
+                    <span>Giả lập thanh toán thành công (Thử nghiệm)</span>
                   </button>
                 </div>
 

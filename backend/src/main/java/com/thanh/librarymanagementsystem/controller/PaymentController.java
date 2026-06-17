@@ -147,6 +147,65 @@ public class PaymentController {
     }
 
     /**
+     * Giả lập một webhook thanh toán thành công của SePay cục bộ (dùng cho môi trường Test/Dev).
+     * Endpoint này nhận vào txnRef, tìm giao dịch tương ứng và kích hoạt cập nhật trạng thái
+     * y hệt như webhook thực tế của SePay mà không cần chuyển hướng sang sandbox.
+     */
+    @PostMapping("/sepay/simulate")
+    public ResponseEntity<?> simulateSePayPayment(@RequestBody Map<String, String> request) {
+        String rawTxnRef = request.get("txnRef");
+        if (rawTxnRef == null || rawTxnRef.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "txnRef is required"));
+        }
+
+        // Tự động trích xuất nếu người dùng truyền cả nội dung dạng "SEVQR BL10212345678"
+        String txnRef = extractTxnRef(rawTxnRef);
+        if (txnRef == null) {
+            txnRef = rawTxnRef.trim();
+        }
+
+        log.info("[SePay Simulate] Simulating successful payment for txnRef: '{}'", txnRef);
+
+        PaymentTransaction transaction = paymentTransactionRepository.findByTxnRef(txnRef).orElse(null);
+        if (transaction == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Transaction not found for txnRef: " + txnRef));
+        }
+
+        String gatewayTransactionId = "SIM-" + System.currentTimeMillis();
+
+        PaymentTransactionResponse response = paymentService.updatePaymentAndLoanStatus(
+                txnRef,
+                true,
+                gatewayTransactionId,
+                null
+        );
+
+        // Xử lý Redis key xóa giữ chỗ nếu là đơn mượn sách (BL)
+        try {
+            if (txnRef.startsWith("BL")) {
+                // Cắt chuỗi lấy loanId ở giữa: Bỏ 2 chữ cái đầu "BL" và bỏ 8 chữ số ngẫu nhiên cuối cùng
+                String loanIdStr = txnRef.substring(2, txnRef.length() - 8);
+                Long loanId = Long.parseLong(loanIdStr);
+                
+                String redisKey = "loan:hold:" + loanId;
+                String statusKey = "loan:status:" + loanId;
+                
+                redisTemplate.delete(redisKey);
+                redisTemplate.opsForValue().set(statusKey, "PENDING_PICKUP", 60, TimeUnit.SECONDS);
+                log.info("[SePay Simulate] Successfully cleaned Redis keys for loan: {}", loanId);
+            }
+        } catch (Exception e) {
+            log.error("[SePay Simulate] Redis cleanup error: " + e.getMessage(), e);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Giả lập webhook thanh toán thành công!",
+                "data", response
+        ));
+    }
+
+    /**
      * Trích xuất mã đơn hàng (txnRef) từ nội dung chuyển khoản SePay.
      *
      * Các format txnRef hợp lệ trong hệ thống:
