@@ -16,6 +16,9 @@ public class FineResponse {
     private Long bookLoanId;
     private Long userId;
     private String userEmail;
+    private String userName;        // Full name từ UserProfiles
+    private String bookTitle;       // Tên sách liên quan tới khoản phạt này
+    private Integer overdueDays;    // Số ngày quá hạn (lấy từ BookLoan)
     private FineType type;
     private Long amount;
     private Long amountPaid;

@@ -4,6 +4,7 @@ import com.thanh.librarymanagementsystem.enums.CopyStatus;
 import com.thanh.librarymanagementsystem.enums.FineStatus;
 import com.thanh.librarymanagementsystem.enums.FineType;
 import com.thanh.librarymanagementsystem.enums.LoanStatus;
+import com.thanh.librarymanagementsystem.enums.NotificationType;
 import com.thanh.librarymanagementsystem.model.BookCopy;
 import com.thanh.librarymanagementsystem.model.BookLoan;
 import com.thanh.librarymanagementsystem.model.Fine;
@@ -11,6 +12,7 @@ import com.thanh.librarymanagementsystem.repository.BookCopyRepository;
 import com.thanh.librarymanagementsystem.repository.BookLoanRepository;
 import com.thanh.librarymanagementsystem.repository.BookRepository;
 import com.thanh.librarymanagementsystem.repository.FineRepository;
+import com.thanh.librarymanagementsystem.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -47,6 +49,8 @@ public class OverdueLoanScheduler {
     private final BookRepository      bookRepository;
     private final FineRepository      fineRepository;
     private final com.thanh.librarymanagementsystem.service.BookReservationService bookReservationService;
+    // ── THÊM: NotificationService để push SSE tới user & admin khi tạo fine ──
+    private final NotificationService notificationService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // JOB 1 — OVERDUE DETECTION (00:00 daily)
@@ -100,6 +104,32 @@ public class OverdueLoanScheduler {
                 }
 
                 bookLoanRepository.save(loan);
+
+                // ── PUSH NOTIFICATION: Gửi SSE + tạo thông báo DB ────────────────────
+                // Lấy tên sách để hiển thị trong thông báo
+                String bookTitle = "(không rõ)";
+                try {
+                    bookTitle = loan.getBookCopy().getBook().getTitle();
+                } catch (Exception ignored) { /* không có thông tin sách, dùng fallback */ }
+
+                // Thông báo cho USER bị phạt — gửi email vì đây là thông báo quan trọng
+                String userTitle   = "⚠️ Sách quá hạn — Bị phạt";
+                String userMessage = String.format(
+                        "Sách \"%s\" của bạn đã quá hạn %d ngày. Phí phạt tích lũy: %,d VND. " +
+                        "Vui lòng ra quầy thủ thư để trả sách và thanh toán phí phạt.",
+                        bookTitle, overdueDays, totalFine
+                );
+                notificationService.createAndPush(loan.getUser(), userTitle, userMessage,
+                        NotificationType.FINE_ISSUED, true /* sendEmail = true */);
+
+                // Thông báo cho tất cả ADMIN — không cần email
+                String adminTitle   = "🚨 Có sách quá hạn mới";
+                String adminMessage = String.format(
+                        "Độc giả [%s] — Sách \"%s\" quá hạn %d ngày — Phí phạt: %,d VND.",
+                        loan.getUser().getEmail(), bookTitle, overdueDays, totalFine
+                );
+                notificationService.createAndPushToAllAdmins(adminTitle, adminMessage, NotificationType.FINE_ISSUED);
+
                 processed++;
             } catch (Exception e) {
                 log.error("[Scheduler] Error processing overdue loan {}: {}", loan.getId(), e.getMessage());

@@ -20,4 +20,12 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             " WHERE s.isActive = true AND" +
             " s.endDate < :today")
     List<Subscription> findExpiredActiveSubscription(@Param("today") LocalDateTime today);
+
+    /**
+     * Tìm các gói subscription còn ≤ 3 ngày là hết hạn (dùng cho scheduler cảnh báo VIP_EXPIRY).
+     */
+    @Query("SELECT s FROM Subscription s JOIN FETCH s.user" +
+            " WHERE s.isActive = true" +
+            " AND s.endDate BETWEEN :now AND :in3days")
+    List<Subscription> findExpiringSubscriptions(@Param("now") LocalDateTime now, @Param("in3days") LocalDateTime in3days);
 }

@@ -5,7 +5,7 @@
  * Dark slate sidebar + topbar.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -21,10 +21,22 @@ import {
   X,
   Bell,
   ShieldCheck,
+  CheckCircle,
+  Clock,
+  Star,
+  CurrencyDollar,
+  BookBookmark,
 } from '@phosphor-icons/react';
 import Dialog        from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import { useAuth } from '../context/AuthContext';
+import {
+  getMyNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  createNotificationEventSource,
+  type NotificationItem,
+} from '../api/notificationsApi';
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 const ADMIN_NAV_ITEMS = [
@@ -76,6 +88,177 @@ function LogoutDialog({ open, onCancel, onConfirm }: {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Admin Notification Bell (SSE) ───────────────────────────────────────────
+// Admin cũng cần nhận thông báo real-time khi có sách quá hạn, v.v.
+function notifConfig(type: NotificationItem['type']) {
+  switch (type) {
+    case 'VIP_EXPIRY':
+      return { icon: Star, bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-500' };
+    case 'RESERVATION_READY':
+      return { icon: BookBookmark, bg: 'bg-indigo-50', text: 'text-indigo-600', dot: 'bg-indigo-500' };
+    case 'LOAN_EXPIRING':
+      return { icon: Clock, bg: 'bg-orange-50', text: 'text-orange-600', dot: 'bg-orange-500' };
+    case 'FINE_ISSUED':
+      return { icon: CurrencyDollar, bg: 'bg-rose-50', text: 'text-rose-600', dot: 'bg-rose-500' };
+    default:
+      return { icon: Bell, bg: 'bg-slate-50', text: 'text-slate-600', dot: 'bg-slate-400' };
+  }
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function AdminNotificationBell() {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getMyNotifications();
+      setNotifications(data);
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load lần đầu
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  // ─── SSE: Admin nhận thông báo real-time ──────────────────────────────────────
+  // Điều này rất quan trọng vì khi có sách quá hạn, Admin cần biết ngay lập tức
+  useEffect(() => {
+    const es = createNotificationEventSource();
+    es.addEventListener('CONNECTED', () => console.log('[SSE-Admin] Connected'));
+    es.addEventListener('NOTIFICATION', (e: MessageEvent) => {
+      try {
+        const newNotif: NotificationItem = JSON.parse(e.data);
+        setNotifications((prev) => [newNotif, ...prev]);
+      } catch { /* ignore parse errors */ }
+    });
+    es.onerror = () => console.warn('[SSE-Admin] Connection lost, auto-reconnecting...');
+    return () => es.close();
+  }, []);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleMarkRead = async (id: number) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    } catch { /* ignore */ }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="relative w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+        aria-label="Admin Notifications"
+      >
+        <Bell size={18} />
+        {unreadCount > 0 && (
+          <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5 rounded-full bg-rose-500 text-[9px] font-bold text-white flex items-center justify-center leading-none">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/60 overflow-hidden z-50"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Bell size={15} weight="fill" className="text-red-500" />
+                <span className="text-sm font-bold text-slate-800">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">{unreadCount}</span>
+                )}
+              </div>
+              {unreadCount > 0 && (
+                <button type="button" onClick={handleMarkAllRead}
+                  className="text-[11px] text-red-500 hover:text-red-700 font-semibold cursor-pointer transition-colors">
+                  Mark all as read
+                </button>
+              )}
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {loading && notifications.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 text-xs">Loading...</div>
+              ) : notifications.length === 0 ? (
+                <div className="py-10 text-center">
+                  <CheckCircle size={28} className="text-slate-200 mx-auto mb-2" weight="fill" />
+                  <p className="text-sm text-slate-400">No notifications</p>
+                </div>
+              ) : (
+                notifications.slice(0, 20).map((notif) => {
+                  const cfg = notifConfig(notif.type);
+                  const Icon = cfg.icon;
+                  return (
+                    <button
+                      key={notif.id}
+                      type="button"
+                      onClick={() => handleMarkRead(notif.id)}
+                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer ${
+                        !notif.isRead ? 'bg-rose-50/20' : ''
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 mt-0.5`}>
+                        <Icon size={15} weight="fill" className={cfg.text} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-xs font-semibold leading-snug ${notif.isRead ? 'text-slate-600' : 'text-slate-800'}`}>{notif.title}</p>
+                          {!notif.isRead && <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0 mt-1`} />}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{notif.message}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">{timeAgo(notif.createdAt)}</p>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -171,11 +354,8 @@ function AdminTopbar({ pageTitle, onMenuClick }: { pageTitle: string; onMenuClic
       <span className="text-slate-700 font-semibold text-[15px] shrink-0 hidden sm:block">{pageTitle}</span>
 
       <div className="ml-auto flex items-center gap-2">
-        <button type="button"
-          className="relative w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors cursor-pointer">
-          <Bell size={18} />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-rose-500" />
-        </button>
+        {/* Admin Notification Bell — nhận SSE real-time khi có sách quá hạn */}
+        <AdminNotificationBell />
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
           {(user?.email?.[0] ?? 'A').toUpperCase()}
         </div>

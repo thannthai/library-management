@@ -14,7 +14,10 @@ public abstract class FineMapper implements BaseMapper<FineRequest, FineResponse
 
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "userEmail", source = "user.email")
+    @Mapping(target = "userName", source = "user.userProfiles.fullName")
     @Mapping(target = "bookLoanId", source = "bookLoan.id")
+    @Mapping(target = "bookTitle", source = "bookLoan.bookCopy.book.title")
+    @Mapping(target = "overdueDays", source = "bookLoan.overdueDays")
     @Mapping(target = "waivedById", source = "waivedBy.id")
     @Mapping(target = "waivedByEmail", source = "waivedBy.email")
     @Mapping(target = "processedById", source = "processedBy.id")

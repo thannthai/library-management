@@ -58,8 +58,8 @@ public class SecurityConfig {
         // 2. Cho phép các phương thức (GET, POST, PUT, DELETE,...)
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
-        // 3. Cho phép các Header (Authorization, Content-Type,...)
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+        // 3. Cho phép các Header cần thiết — bao gồm "text/event-stream" cho SSE
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "Cache-Control"));
 
         // 4. Cho phép gửi kèm Credentials (như Cookie nếu sau này cần)
         configuration.setAllowCredentials(true);

@@ -44,6 +44,7 @@ import {
   getMyNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  createNotificationEventSource,  // ← SSE factory
   type NotificationItem,
 } from '../api/notificationsApi';
 
@@ -113,12 +114,48 @@ function NotificationBell() {
     }
   }, []);
 
-  // Load on mount + poll every 60s
+  // ─── Load lần đầu (fetch tất cả thông báo hiện có) ──────────────────────────────
   useEffect(() => {
     fetchNotifications();
-    const timer = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(timer);
   }, [fetchNotifications]);
+
+  // ─── Kết nối SSE để nhận thông báo real-time ───────────────────────────────
+  //
+  // SSE hoạt động như sau:
+  //   - Browser mở 1 kết nối HTTP dài hạn với /api/notifications/subscribe
+  //   - Server giữ kết nối mở và push event khi có thông báo mới
+  //   - Browser tự động reconnect nếu mất kết nối (built-in)
+  //   - Cleanup: gọi es.close() khi component unmount
+  useEffect(() => {
+    const es = createNotificationEventSource();
+
+    // Nhận event xác nhận kết nối đã thiết lập
+    es.addEventListener('CONNECTED', () => {
+      console.log('[SSE] Notification channel connected');
+    });
+
+    // Nhận thông báo mới từ server push
+    es.addEventListener('NOTIFICATION', (e: MessageEvent) => {
+      try {
+        const newNotif: NotificationItem = JSON.parse(e.data);
+        // Thêm vào đầu danh sách (thông báo mới nhất hiển trước)
+        setNotifications((prev) => [newNotif, ...prev]);
+      } catch (err) {
+        console.warn('[SSE] Failed to parse notification event:', err);
+      }
+    });
+
+    // Lỗi kết nối — browser sẽ tự reconnect, chỉ cần log
+    es.onerror = () => {
+      console.warn('[SSE] Connection lost, browser will auto-reconnect...');
+    };
+
+    // Cleanup: đóng kết nối khi component unmount (ví dụ: đăng xuất, chuyển trang ra ngoài dashboard)
+    return () => {
+      es.close();
+      console.log('[SSE] Notification channel closed');
+    };
+  }, []); // chỉ chạy 1 lần khi NotificationBell mount
 
   // Close on outside click
   useEffect(() => {

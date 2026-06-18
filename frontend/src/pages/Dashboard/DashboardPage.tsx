@@ -835,24 +835,32 @@ export default function DashboardPage() {
           </p>
         </motion.div>
 
-        {/* Overdue warning banner */}
-        {overdueLoans.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 flex items-start gap-3"
-          >
-            <Warning size={18} weight="fill" className="text-rose-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-rose-700">
-                You have {overdueLoans.length} overdue book(s)!
-              </p>
-              <p className="text-xs text-rose-500 mt-0.5">
-                Please return them soon to avoid late fees.
-              </p>
-            </div>
-          </motion.div>
-        )}
+        {/* ─── Overdue Warning Banner ─────────────────────────────────────────── */}
+        {overdueLoans.length > 0 && (() => {
+          // Tính tổng phí phạt tích lũy: 5,000 VND/ngày × tổng số ngày quá hạn
+          const FINE_PER_DAY = 5_000;
+          const totalOverdueDays = overdueLoans.reduce((sum, l) => sum + (l.overdueDays || 0), 0);
+          const totalFine = totalOverdueDays * FINE_PER_DAY;
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3.5 flex items-start gap-3"
+            >
+              <Warning size={20} weight="fill" className="text-rose-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-rose-700">
+                  ⚠️ You have {overdueLoans.length} overdue book{overdueLoans.length > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-rose-600 mt-0.5 leading-relaxed">
+                  Accumulated fine: <span className="font-bold">{totalFine.toLocaleString('vi-VN')} VND</span>.
+                  {' '}Please visit the library counter to return your book{overdueLoans.length > 1 ? 's' : ''} and settle any outstanding fees.
+                </p>
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* Pending Pickup warning banner */}
         {pendingPickupLoans.length > 0 && (

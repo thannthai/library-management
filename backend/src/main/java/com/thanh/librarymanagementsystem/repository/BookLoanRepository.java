@@ -72,5 +72,18 @@ public interface BookLoanRepository extends JpaRepository<BookLoan, Long> {
 
     /** Admin stats: count by status */
     long countByStatus(LoanStatus status);
+
+    /**
+     * Tìm các đơn mượn sắp hết hạn trong vòng 24 giờ tới (dùng cho scheduler LOAN_EXPIRING).
+     * Chỉ lấy đơn có trạng thái CHECKED_OUT (đang trong tay user, chưa quá hạn).
+     *
+     * @param now      thời điểm hiện tại
+     * @param tomorrow thời điểm 24 giờ sau
+     */
+    @Query("SELECT bl FROM BookLoan bl JOIN FETCH bl.user u JOIN FETCH bl.bookCopy bc JOIN FETCH bc.book b" +
+            " WHERE bl.status = 'CHECKED_OUT' AND bl.dueDate BETWEEN :now AND :tomorrow")
+    List<BookLoan> findLoansExpiringSoon(
+            @Param("now") LocalDateTime now,
+            @Param("tomorrow") LocalDateTime tomorrow);
 }
 
