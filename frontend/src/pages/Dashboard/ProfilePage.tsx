@@ -54,10 +54,10 @@ export default function ProfilePage() {
       .finally(() => setLoadingStats(false));
   }, [user]);
 
-  const displayPlanName = activeSub ? activeSub.planName : 'Gói Mặc Định (FREE)';
+  const displayPlanName = activeSub ? activeSub.planName : 'Default Plan (FREE)';
   const displayPlanDesc = activeSub 
-    ? `Hạn dùng còn lại ${activeSub.daysRemaining} ngày (Hết hạn: ${activeSub.endDate})`
-    : 'Mượn lẻ 15k/cuốn, tối đa 2 cuốn cùng lúc.';
+    ? `${activeSub.daysRemaining} days remaining (Expires: ${activeSub.endDate})`
+    : 'Pay-per-book 15k/book, max 2 books concurrently.';
 
   return (
     <DashboardLayout pageTitle="Profile">
@@ -70,10 +70,10 @@ export default function ProfilePage() {
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
           <h1 className="text-2xl font-extrabold text-slate-800">
-            Hồ Sơ <span className="text-indigo-600">Cá Nhân</span>
+            My <span className="text-indigo-600">Profile</span>
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Xem chi tiết thông tin tài khoản và đặc quyền hội viên của bạn.
+            View your account details and membership benefits.
           </p>
         </motion.div>
 
@@ -94,15 +94,15 @@ export default function ProfilePage() {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="font-extrabold text-slate-800 text-lg">{user?.fullName || 'Người dùng BookNest'}</h3>
+                  <h3 className="font-extrabold text-slate-800 text-lg">{user?.fullName || 'BookNest User'}</h3>
                   {user?.isVerified && (
-                    <span title="Đã xác minh" className="inline-flex items-center">
+                    <span title="Verified" className="inline-flex items-center">
                       <ShieldCheck size={18} weight="fill" className="text-emerald-500" />
                     </span>
                   )}
                 </div>
                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600 uppercase tracking-wide mt-1">
-                  {user?.role === 'ADMIN' ? 'Administrator' : 'Độc Giả'}
+                  {user?.role === 'ADMIN' ? 'Administrator' : 'Reader'}
                 </span>
               </div>
             </div>
@@ -126,8 +126,8 @@ export default function ProfilePage() {
                   <Phone size={16} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Số điện thoại</p>
-                  <p className="text-xs font-bold text-slate-700 truncate">{user?.phone || 'Chưa cập nhật'}</p>
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Phone number</p>
+                  <p className="text-xs font-bold text-slate-700 truncate">{user?.phone || 'Not updated'}</p>
                 </div>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h4 className="font-bold text-slate-800 text-sm leading-tight">Membership Tier</h4>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Hạng thành viên</p>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Membership Tier</p>
               </div>
             </div>
 
@@ -157,7 +157,7 @@ export default function ProfilePage() {
               {loadingSub ? (
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <CircleNotch size={14} className="animate-spin text-indigo-600" />
-                  Đang tải thông tin gói...
+                  Loading membership details...
                 </div>
               ) : (
                 <>
@@ -178,36 +178,36 @@ export default function ProfilePage() {
         >
           <h2 className="font-extrabold text-slate-800 text-base mb-5 flex items-center gap-2">
             <Books size={20} weight="fill" className="text-indigo-500" />
-            Thống Kê Đọc Sách Cá Nhân
+            Personal Reading Statistics
           </h2>
 
           {loadingStats ? (
             <div className="flex items-center justify-center py-6 gap-2 text-xs text-slate-400">
               <CircleNotch size={16} className="animate-spin text-indigo-600" />
-              Đang tính toán các chỉ số...
+              Calculating stats...
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
                 <span className="block text-2xl font-black text-indigo-600">{stats.totalBorrowed}</span>
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Lượt mượn sách</span>
+                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Total Borrowed</span>
               </div>
 
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
                 <span className="block text-2xl font-black text-emerald-600">{stats.currentlyReading}</span>
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Đang mượn về</span>
+                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Currently Borrowing</span>
               </div>
 
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
                 <span className="block text-2xl font-black text-blue-600">{stats.pendingPickup}</span>
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Chờ ra lấy</span>
+                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Pending Pickup</span>
               </div>
 
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
                 <span className={`block text-2xl font-black ${stats.overdueCount > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
                   {stats.overdueCount}
                 </span>
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Đơn quá hạn</span>
+                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Overdue Loans</span>
               </div>
             </div>
           )}

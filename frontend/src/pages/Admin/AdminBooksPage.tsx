@@ -118,7 +118,7 @@ function MultiSelectDropdown({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                placeholder="Tìm kiếm..."
+                placeholder="Search..."
                 className="w-full text-xs bg-transparent outline-none border-none p-0 text-slate-700 placeholder:text-slate-400"
               />
               {search && (
@@ -130,7 +130,7 @@ function MultiSelectDropdown({
 
             <div className="overflow-y-auto flex-1 py-1">
               {filteredOptions.length === 0 ? (
-                <div className="py-6 text-center text-xs text-slate-400">Không tìm thấy kết quả</div>
+                <div className="py-6 text-center text-xs text-slate-400">No results found</div>
               ) : (
                 filteredOptions.map(opt => {
                   const isSelected = selectedIds.includes(opt.id);
@@ -238,7 +238,7 @@ function SingleSelectDropdown({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                placeholder="Tìm kiếm..."
+                placeholder="Search..."
                 className="w-full text-xs bg-transparent outline-none border-none p-0 text-slate-700 placeholder:text-slate-400"
               />
               {search && (
@@ -256,7 +256,7 @@ function SingleSelectDropdown({
                 {placeholder}
               </div>
               {filteredOptions.length === 0 ? (
-                <div className="py-6 text-center text-xs text-slate-400">Không tìm thấy kết quả</div>
+                <div className="py-6 text-center text-xs text-slate-400">No results found</div>
               ) : (
                 filteredOptions.map(opt => {
                   const isSelected = opt.id === selectedId;
@@ -334,7 +334,7 @@ export default function AdminBooksPage() {
       setAuthors(authorsData || []);
       setPublishers(publishersData || []);
     } catch (e) {
-      toast.error('Lỗi khi tải danh sách thể loại / tác giả / NXB');
+      toast.error('Error loading genres / authors / publishers');
     }
   };
 
@@ -344,7 +344,7 @@ export default function AdminBooksPage() {
       const data = await getBooks({ page: 0, size: 100 });
       setBooks(data?.content || []);
     } catch (e) {
-      toast.error('Lỗi khi tải danh sách sách');
+      toast.error('Error loading books list');
     } finally {
       setLoading(false);
     }
@@ -409,9 +409,9 @@ export default function AdminBooksPage() {
       setSelectedAuthorIds(prev => [...prev, newAuth.id]);
       setNewAuthorName('');
       setQuickAuthorOpen(false);
-      toast.success('Thêm tác giả thành công');
+      toast.success('Author added successfully');
     } catch (e) {
-      toast.error('Không thể thêm tác giả');
+      toast.error('Could not add author');
     }
   };
 
@@ -423,16 +423,16 @@ export default function AdminBooksPage() {
       setSelectedPublisherId(newPub.id);
       setNewPublisherName('');
       setQuickPublisherOpen(false);
-      toast.success('Thêm nhà xuất bản thành công');
+      toast.success('Publisher added successfully');
     } catch (e) {
-      toast.error('Không thể thêm nhà xuất bản');
+      toast.error('Could not add publisher');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isbn.trim() || !title.trim() || selectedAuthorIds.length === 0 || selectedGenreIds.length === 0 || !selectedPublisherId) {
-      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      toast.error('Please fill in all required fields.');
       return;
     }
 
@@ -458,16 +458,16 @@ export default function AdminBooksPage() {
     try {
       if (isEdit && selectedBook) {
         await updateBook(selectedBook.id, payload);
-        toast.success('Cập nhật sách thành công!');
+        toast.success('Book updated successfully!');
       } else {
         await createBook(payload);
-        toast.success('Thêm sách mới thành công!');
+        toast.success('Book added successfully!');
       }
       setFormOpen(false);
       resetForm();
       fetchBooks();
     } catch (err: any) {
-      toast.error(err.message || 'Thao tác thất bại.');
+      toast.error(err.message || 'Action failed.');
     } finally {
       setSubmitting(false);
     }
@@ -482,17 +482,17 @@ export default function AdminBooksPage() {
     if (!deletingBook) return;
     try {
       await deleteBook(deletingBook.id);
-      toast.success('Xóa sách thành công!');
+      toast.success('Book deleted successfully!');
       setBooks(prev => prev.filter(b => b.id !== deletingBook.id));
       setDeleteOpen(false);
       setDeletingBook(null);
     } catch (err: any) {
-      toast.error(err.message || 'Không thể xóa sách.');
+      toast.error(err.message || 'Could not delete book.');
     }
   };
 
   return (
-    <AdminLayout pageTitle="Quản Lý Sách">
+    <AdminLayout pageTitle="Book Management">
       <div className="p-6 max-w-6xl mx-auto space-y-6">
         
         {/* Header section */}
@@ -500,15 +500,15 @@ export default function AdminBooksPage() {
           <div>
             <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
               <Books size={26} weight="fill" className="text-indigo-500" />
-              Danh Mục Sách
+              Book Inventory
             </h1>
-            <p className="text-sm text-slate-400 mt-1">Quản lý kho sách, thông tin tác giả và bản sao.</p>
+            <p className="text-sm text-slate-400 mt-1">Manage books, authors, and copies.</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={fetchBooks}
               className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-xl cursor-pointer transition-colors"
-              title="Làm mới"
+              title="Refresh"
             >
               <ArrowClockwise size={16} />
             </button>
@@ -516,7 +516,7 @@ export default function AdminBooksPage() {
               onClick={handleOpenAdd}
               className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold text-xs transition-colors cursor-pointer"
             >
-              <Plus size={16} weight="bold" /> Thêm sách mới
+              <Plus size={16} weight="bold" /> Add New Book
             </button>
           </div>
         </div>
@@ -527,10 +527,10 @@ export default function AdminBooksPage() {
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-6 py-4">Sách</th>
-                  <th className="px-6 py-4">Tác giả</th>
-                  <th className="px-6 py-4 text-center">Có sẵn / Tổng</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
+                  <th className="px-6 py-4">Book</th>
+                  <th className="px-6 py-4">Author</th>
+                  <th className="px-6 py-4 text-center">Available / Total</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 font-medium">
@@ -539,13 +539,13 @@ export default function AdminBooksPage() {
                     <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
                       <div className="flex items-center justify-center gap-2">
                         <CircleNotch size={16} className="animate-spin text-indigo-500" />
-                        Đang tải danh sách sách...
+                        Loading books catalog...
                       </div>
                     </td>
                   </tr>
                 ) : (books || []).length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">Không tìm thấy sách nào.</td>
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">No books found.</td>
                   </tr>
                 ) : (
                   (books || []).map((book) => (
@@ -564,7 +564,7 @@ export default function AdminBooksPage() {
                         </div>
                       </td>
                       <td className="px-6 py-3 text-slate-500 font-semibold">
-                        {book.authors?.map((a: any) => a.name).join(', ') || 'Chưa rõ'}
+                        {book.authors?.map((a: any) => a.name).join(', ') || 'Unknown'}
                       </td>
                       <td className="px-6 py-3 text-center">
                         <span className="font-extrabold text-indigo-600">{book.availableCopies}</span>
@@ -576,14 +576,14 @@ export default function AdminBooksPage() {
                           <button
                             onClick={() => handleOpenEdit(book)}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all cursor-pointer"
-                            title="Chỉnh sửa"
+                            title="Edit"
                           >
                             <PencilSimple size={15} weight="bold" />
                           </button>
                           <button
                             onClick={() => handleOpenDelete(book)}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
-                            title="Xóa"
+                            title="Delete"
                           >
                             <Trash size={15} weight="bold" />
                           </button>
@@ -610,85 +610,85 @@ export default function AdminBooksPage() {
               <div className="p-6 bg-slate-50 border-b border-slate-100">
                 <h2 className="text-base font-black text-slate-800 flex items-center gap-1.5">
                   <Books size={20} weight="fill" className="text-indigo-500" />
-                  {isEdit ? 'Chỉnh Sửa Sách' : 'Thêm Sách Mới'}
+                  {isEdit ? 'Edit Book' : 'Add New Book'}
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">Nhập các chi tiết kỹ thuật cho kho thư viện BookNest.</p>
+                <p className="text-xs text-slate-400 mt-0.5">Enter details for BookNest library catalog.</p>
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[70vh] overflow-y-auto">
                 
                 {/* Title */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tiêu Đề Sách *</label>
-                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ví dụ: Clean Code"
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Book Title *</label>
+                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Clean Code"
                     className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300" />
                 </div>
 
                 {/* ISBN */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Mã ISBN *</label>
-                  <input type="text" value={isbn} onChange={(e) => setIsbn(e.target.value)} required placeholder="Ví dụ: 978-0-13-235088-4"
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">ISBN Code *</label>
+                  <input type="text" value={isbn} onChange={(e) => setIsbn(e.target.value)} required placeholder="e.g. 978-0-13-235088-4"
                     className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300" />
                 </div>
 
                 {/* Authors (Multi) */}
                 <MultiSelectDropdown
-                  label="Tác Giả *"
+                  label="Authors *"
                   options={authors}
                   selectedIds={selectedAuthorIds}
                   onChange={setSelectedAuthorIds}
-                  placeholder="Chọn tác giả..."
+                  placeholder="Select authors..."
                   quickAddNode={
-                    <div className="relative">
-                      <button type="button" onClick={() => setQuickAuthorOpen(!quickAuthorOpen)}
-                        className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer">
-                        + Thêm tác giả mới
-                      </button>
-                      {quickAuthorOpen && (
-                        <div className="absolute right-0 top-5 z-[100] w-64 p-3 bg-white border border-slate-200 rounded-2xl shadow-xl flex flex-col gap-2">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase">Thêm Tác Giả Mới</p>
-                          <input type="text" value={newAuthorName} onChange={(e) => setNewAuthorName(e.target.value)} placeholder="Tên tác giả..."
-                            className="h-8 px-2 text-[11px] border border-slate-200 rounded-xl outline-none" />
-                          <div className="flex gap-2 justify-end">
-                            <button type="button" onClick={() => setQuickAuthorOpen(false)} className="h-7 px-2.5 border border-slate-200 text-slate-500 font-bold text-[10px] rounded-lg">Hủy</button>
-                            <button type="button" onClick={handleQuickAddAuthor} className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg">Lưu</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                     <div className="relative">
+                       <button type="button" onClick={() => setQuickAuthorOpen(!quickAuthorOpen)}
+                         className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer">
+                         + Add new author
+                       </button>
+                       {quickAuthorOpen && (
+                         <div className="absolute right-0 top-5 z-[100] w-64 p-3 bg-white border border-slate-200 rounded-2xl shadow-xl flex flex-col gap-2">
+                           <p className="text-[10px] font-bold text-slate-500 uppercase">Add New Author</p>
+                           <input type="text" value={newAuthorName} onChange={(e) => setNewAuthorName(e.target.value)} placeholder="Author name..."
+                             className="h-8 px-2 text-[11px] border border-slate-200 rounded-xl outline-none" />
+                           <div className="flex gap-2 justify-end">
+                             <button type="button" onClick={() => setQuickAuthorOpen(false)} className="h-7 px-2.5 border border-slate-200 text-slate-500 font-bold text-[10px] rounded-lg">Cancel</button>
+                             <button type="button" onClick={handleQuickAddAuthor} className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg">Save</button>
+                           </div>
+                         </div>
+                       )}
+                     </div>
                   }
                 />
 
                 {/* Genres (Multi) */}
                 <MultiSelectDropdown
-                  label="Thể Loại *"
+                  label="Genres *"
                   options={genres}
                   selectedIds={selectedGenreIds}
                   onChange={setSelectedGenreIds}
-                  placeholder="Chọn thể loại..."
+                  placeholder="Select genres..."
                 />
 
                 {/* Publisher */}
                 <SingleSelectDropdown
-                  label="Nhà Xuất Bản *"
+                  label="Publisher *"
                   options={publishers}
                   selectedId={selectedPublisherId}
                   onChange={setSelectedPublisherId}
-                  placeholder="Chọn nhà xuất bản..."
+                  placeholder="Select publisher..."
                   quickAddNode={
                     <div className="relative">
                       <button type="button" onClick={() => setQuickPublisherOpen(!quickPublisherOpen)}
                         className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer">
-                        + Thêm NXB mới
+                        + Add new publisher
                       </button>
                       {quickPublisherOpen && (
                         <div className="absolute right-0 top-5 z-[100] w-64 p-3 bg-white border border-slate-200 rounded-2xl shadow-xl flex flex-col gap-2">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase">Thêm Nhà Xuất Bản Mới</p>
-                          <input type="text" value={newPublisherName} onChange={(e) => setNewPublisherName(e.target.value)} placeholder="Tên NXB..."
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">Add New Publisher</p>
+                          <input type="text" value={newPublisherName} onChange={(e) => setNewPublisherName(e.target.value)} placeholder="Publisher name..."
                             className="h-8 px-2 text-[11px] border border-slate-200 rounded-xl outline-none" />
                           <div className="flex gap-2 justify-end">
-                            <button type="button" onClick={() => setQuickPublisherOpen(false)} className="h-7 px-2.5 border border-slate-200 text-slate-500 font-bold text-[10px] rounded-lg">Hủy</button>
-                            <button type="button" onClick={handleQuickAddPublisher} className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg">Lưu</button>
+                            <button type="button" onClick={() => setQuickPublisherOpen(false)} className="h-7 px-2.5 border border-slate-200 text-slate-500 font-bold text-[10px] rounded-lg">Cancel</button>
+                            <button type="button" onClick={handleQuickAddPublisher} className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg">Save</button>
                           </div>
                         </div>
                       )}
@@ -698,7 +698,7 @@ export default function AdminBooksPage() {
 
                 {/* Publication Date */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ngày Xuất Bản</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Publication Date</label>
                   <input type="date" value={publicationDate} onChange={(e) => setPublicationDate(e.target.value)}
                     className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                 </div>
@@ -706,12 +706,12 @@ export default function AdminBooksPage() {
                 {/* Language & Pages */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ngôn Ngữ</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Language</label>
                     <input type="text" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="vi"
                       className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Số Trang</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Pages</label>
                     <input type="number" value={pages} onChange={(e) => setPages(e.target.value ? Number(e.target.value) : '')} placeholder="350"
                       className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                   </div>
@@ -719,7 +719,7 @@ export default function AdminBooksPage() {
 
                 {/* Cover Image URL */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ảnh bìa (URL)</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Cover Image (URL)</label>
                   <input type="url" value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://..."
                     className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                 </div>
@@ -727,12 +727,12 @@ export default function AdminBooksPage() {
                 {/* Copies configuration */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng số bản sao *</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Total Copies *</label>
                     <input type="number" value={totalCopies} onChange={(e) => setTotalCopies(Number(e.target.value))} required min={1}
                       className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Bản sao có sẵn *</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Available Copies *</label>
                     <input type="number" value={availableCopies} onChange={(e) => setAvailableCopies(Number(e.target.value))} required min={0}
                       className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                   </div>
@@ -741,12 +741,12 @@ export default function AdminBooksPage() {
                 {/* Fees configuration */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Giá trị sách (VND)</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Book Price (VND)</label>
                     <input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} min={0}
                       className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Phí mượn lẻ / ngày *</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Daily Loan Fee (VND) *</label>
                     <input type="number" value={loanFeePerDay} onChange={(e) => setLoanFeePerDay(Number(e.target.value))} required min={0}
                       className="h-10 px-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
                   </div>
@@ -754,8 +754,8 @@ export default function AdminBooksPage() {
 
                 {/* Description */}
                 <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Mô Tả Chi Tiết</label>
-                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tóm tắt nội dung sách..."
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Detailed Description</label>
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Summary of book content..."
                     className="h-24 p-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-indigo-400 resize-none" />
                 </div>
 
@@ -763,12 +763,12 @@ export default function AdminBooksPage() {
                 <div className="md:col-span-2 border-t border-slate-100 pt-5 flex gap-3 justify-end">
                   <button type="button" onClick={() => setFormOpen(false)} disabled={submitting}
                     className="h-10 px-5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold text-xs cursor-pointer">
-                    Hủy bỏ
+                    Cancel
                   </button>
                   <button type="submit" disabled={submitting}
                     className="h-10 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer flex items-center justify-center gap-1.5 shadow shadow-indigo-100">
                     {submitting ? <CircleNotch size={14} className="animate-spin" /> : <Check size={14} weight="bold" />}
-                    Lưu thông tin
+                    Save Changes
                   </button>
                 </div>
               </form>
@@ -786,18 +786,18 @@ export default function AdminBooksPage() {
                   <Trash size={28} weight="fill" className="text-rose-500" />
                 </div>
               </div>
-              <h2 className="text-center text-sm font-black text-slate-800 mb-2">Xác nhận xóa sách</h2>
+              <h2 className="text-center text-sm font-black text-slate-800 mb-2">Confirm Book Delete</h2>
               <p className="text-center text-xs text-slate-400 leading-relaxed">
-                Bạn có chắc chắn muốn xóa cuốn sách <strong className="text-slate-700">{deletingBook?.title}</strong> khỏi hệ thống thư viện? Bản sao và lịch sử liên quan sẽ tạm ẩn.
+                Are you sure you want to delete the book <strong className="text-slate-700">{deletingBook?.title}</strong> from the library? Copies and related history will be hidden.
               </p>
               <div className="flex gap-3 mt-6">
                 <button type="button" onClick={() => setDeleteOpen(false)}
                   className="flex-1 h-10 rounded-xl border-2 border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 cursor-pointer">
-                  Hủy
+                  Cancel
                 </button>
                 <button type="button" onClick={handleDeleteConfirm}
                   className="flex-1 h-10 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold cursor-pointer">
-                  Xác nhận xóa
+                  Confirm Delete
                 </button>
               </div>
             </div>

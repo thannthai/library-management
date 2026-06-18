@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowRight, BookOpen } from '@phosphor-icons/react';
+import { ArrowRight, BookOpen, Users, Star } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
-import { HERO_STATS, BOOK_SPINES } from '../../data/landingMockData';
+import { BOOK_SPINES } from '../../data/landingMockData';
 import { useAuth } from '../../context/AuthContext';
 
 const SPINE_H: Record<string, string> = {
@@ -14,6 +14,12 @@ const fadeUp = (delay = 0) => ({
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] as const },
 });
+
+const HERO_STATS = [
+  { value: '12,000+', label: 'Books',   icon: BookOpen },
+  { value: '5,800+',  label: 'Members', icon: Users },
+  { value: '4.8',     label: 'Rating',  icon: Star },
+];
 
 export default function HeroSection() {
   const reduce  = useReducedMotion();
@@ -33,25 +39,25 @@ export default function HeroSection() {
           {/* Badge */}
           <motion.span
             {...(reduce ? {} : fadeUp(0.05))}
-            className="inline-flex items-center gap-2 w-fit px-3.5 py-1.5 rounded-full text-xs font-semibold text-indigo-700 border border-indigo-200 bg-indigo-50"
+            className="inline-flex items-center gap-2 w-fit px-3.5 py-1.5 rounded-full text-xs font-semibold text-indigo-700 border border-indigo-200 bg-indigo-50/80"
           >
             <BookOpen size={12} weight="bold" />
-            Chào mừng đến với BookNest
+            Welcome to BookNest
           </motion.span>
 
           {/* Heading */}
           <motion.div {...(reduce ? {} : fadeUp(0.12))}>
             <h1
               className="font-extrabold tracking-tight text-slate-900"
-              style={{ fontSize: 'clamp(2rem, 3.8vw, 3.1rem)', lineHeight: 1.15 }}
+              style={{ fontSize: 'clamp(2.1rem, 4vw, 3.25rem)', lineHeight: 1.13 }}
             >
-              Cánh cửa dẫn tới
+              Gateway to
             </h1>
             <h1
               className="font-extrabold tracking-tight text-indigo-600"
-              style={{ fontSize: 'clamp(2rem, 3.8vw, 3.1rem)', lineHeight: 1.15 }}
+              style={{ fontSize: 'clamp(2.1rem, 4vw, 3.25rem)', lineHeight: 1.13 }}
             >
-              Tri thức vô tận
+              Infinite Knowledge
             </h1>
           </motion.div>
 
@@ -60,19 +66,23 @@ export default function HeroSection() {
             {...(reduce ? {} : fadeUp(0.19))}
             className="text-[0.975rem] text-slate-500 leading-relaxed max-w-[42ch]"
           >
-            Khám phá, mượn và thưởng thức hàng nghìn đầu sách. Tham gia cộng đồng yêu sách và trải nghiệm thư viện số hiện đại.
+            Discover, borrow, and enjoy thousands of books. Join our community of readers and experience a modern digital library.
           </motion.p>
 
           {/* CTAs — dynamic based on auth state */}
           <motion.div {...(reduce ? {} : fadeUp(0.26))} className="flex items-center gap-3 flex-wrap">
             <button
               type="button"
-              onClick={() =>
-                document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' })
-              }
+              onClick={() => {
+                const el = document.getElementById('featured');
+                if (el) {
+                  const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+                  window.scrollTo({ top: elementPosition - 80, behavior: 'smooth' });
+                }
+              }}
               className="cursor-pointer inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-300/40 hover:shadow-indigo-400/50 active:scale-[0.97] group"
             >
-              Khám phá ngay
+              Explore Now
               <ArrowRight size={14} weight="bold" className="group-hover:translate-x-0.5 transition-transform duration-200" />
             </button>
 
@@ -81,33 +91,39 @@ export default function HeroSection() {
                 to="/dashboard"
                 className="cursor-pointer inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 text-indigo-700 text-sm font-semibold rounded-xl border border-indigo-200 hover:border-indigo-400 transition-all duration-200 active:scale-[0.97] group"
               >
-                Đi đến Dashboard
+                Go to Dashboard
                 <ArrowRight size={14} weight="bold" className="group-hover:translate-x-0.5 transition-transform duration-200" />
               </Link>
             ) : (
               <Link
                 to="/login"
-                className="cursor-pointer inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 hover:border-indigo-200 transition-all duration-200 active:scale-[0.97]"
+                className="cursor-pointer inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 hover:border-indigo-200 transition-all duration-200 active:scale-[0.97] group"
               >
                 <BookOpen size={14} />
-                Đăng nhập
+                Sign In
               </Link>
             )}
           </motion.div>
 
           {/* Stats */}
-          <motion.div {...(reduce ? {} : fadeUp(0.33))} className="flex items-center gap-6 flex-wrap pt-1">
-            {HERO_STATS.map((stat) => (
-              <div key={stat.label} className="flex items-center gap-2">
-                <span className="w-[18px] h-[18px] rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
-                  <svg width="8" height="7" viewBox="0 0 8 7" fill="none" aria-hidden="true">
-                    <path d="M1 3.5L3 5.5L7 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <span className="text-sm font-bold text-slate-800">{stat.value}</span>
-                <span className="text-sm text-slate-400">{stat.label}</span>
-              </div>
-            ))}
+          <motion.div {...(reduce ? {} : fadeUp(0.33))} className="flex items-center gap-5 flex-wrap pt-1">
+            {HERO_STATS.map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600/10 flex items-center justify-center shrink-0">
+                    <Icon size={13} weight="bold" className="text-indigo-600" />
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold text-slate-800">{stat.value}</span>
+                    <span className="text-xs text-slate-400">{stat.label}</span>
+                  </div>
+                  {i < HERO_STATS.length - 1 && (
+                    <div className="w-px h-4 bg-slate-200 ml-2" />
+                  )}
+                </div>
+              );
+            })}
           </motion.div>
         </div>
 
@@ -134,7 +150,7 @@ export default function HeroSection() {
               <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor" aria-hidden="true">
                 <path d="M4.5 0l1 3.1H8.6L6.1 5l1 3.1L4.5 6.4 2 8.1 3 5 .4 3.1H3.5z" />
               </svg>
-              Mới nhất
+              New Releases
             </span>
 
             {/* Spines */}
@@ -170,7 +186,7 @@ export default function HeroSection() {
             </div>
 
             <p className="text-center text-[11px] text-slate-400 font-medium mt-4 tracking-wider">
-              Bộ sưu tập nổi bật
+              Featured Collections
             </p>
           </div>
         </motion.div>

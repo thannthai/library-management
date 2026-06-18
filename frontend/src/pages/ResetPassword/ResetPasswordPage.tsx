@@ -57,11 +57,11 @@ function evaluatePasswordStrength(password: string): PasswordStrength {
 
   const levels: PasswordStrength[] = [
     { score: 0, label: '',         color: '#e2e8f0' },
-    { score: 1, label: 'Rất yếu',  color: '#ef4444' },
-    { score: 2, label: 'Yếu',      color: '#f97316' },
-    { score: 3, label: 'Trung bình', color: '#eab308' },
-    { score: 4, label: 'Mạnh',     color: '#22c55e' },
-    { score: 5, label: 'Rất mạnh', color: '#6366f1' },
+    { score: 1, label: 'Very Weak',  color: '#ef4444' },
+    { score: 2, label: 'Weak',      color: '#f97316' },
+    { score: 3, label: 'Medium', color: '#eab308' },
+    { score: 4, label: 'Strong',     color: '#22c55e' },
+    { score: 5, label: 'Very Strong', color: '#6366f1' },
   ];
   return levels[score];
 }
@@ -79,16 +79,16 @@ function validateForm(newPassword: string, confirmPassword: string): FormErrors 
   const errors: FormErrors = {};
 
   if (!newPassword) {
-    errors.newPassword = 'Vui lòng nhập mật khẩu mới.';
+    errors.newPassword = 'Please enter your new password.';
   } else if (!PASSWORD_POLICY.test(newPassword)) {
     errors.newPassword =
-      'Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.';
+      'Password must be at least 8 characters, and include uppercase, lowercase, numbers, and special characters.';
   }
 
   if (!confirmPassword) {
-    errors.confirmPassword = 'Vui lòng nhập lại mật khẩu.';
+    errors.confirmPassword = 'Please re-enter your password.';
   } else if (newPassword !== confirmPassword) {
-    errors.confirmPassword = 'Hai mật khẩu không khớp nhau.';
+    errors.confirmPassword = 'Passwords do not match.';
   }
 
   return errors;
@@ -133,7 +133,7 @@ export default function ResetPasswordPage() {
 
     // Guard: if no token in URL the link is invalid
     if (!tokenFromUrl) {
-      setErrorMsg('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu liên kết mới.');
+      setErrorMsg('Invalid or expired password reset link. Please request a new link.');
       return;
     }
 
@@ -151,7 +151,7 @@ export default function ResetPasswordPage() {
         newPassword: newPassword,
       });
       setSuccessMsg(
-        response.message ?? 'Đặt lại mật khẩu thành công! Đang chuyển về trang đăng nhập…',
+        response.message ?? 'Password reset successfully! Redirecting to login...',
       );
       // Redirect to login after 2.5 s
       setTimeout(() => navigate('/login'), 2500);
@@ -159,7 +159,7 @@ export default function ResetPasswordPage() {
       setErrorMsg(
         err instanceof Error
           ? err.message
-          : 'Đã xảy ra lỗi. Liên kết có thể đã hết hạn. Vui lòng thử lại.',
+          : 'An error occurred. The link might have expired. Please try again.',
       );
     } finally {
       setSubmitting(false);
@@ -209,21 +209,21 @@ export default function ResetPasswordPage() {
                 <LockKey size={28} weight="duotone" color="white" />
               </div>
               <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
-                Đặt lại<br />
-                <span className="text-indigo-200">mật khẩu mới.</span>
+                Reset your<br />
+                <span className="text-indigo-200">new password.</span>
               </h1>
               <p className="text-indigo-200 text-base leading-relaxed">
-                Tạo một mật khẩu mạnh với ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.
+                Create a strong password with at least 8 characters, including uppercase, lowercase, numbers, and special characters.
               </p>
 
               {/* Policy checklist */}
               <ul className="flex flex-col gap-2.5 mt-8">
                 {[
-                  'Ít nhất 8 ký tự',
-                  'Chứa chữ hoa (A–Z)',
-                  'Chứa chữ thường (a–z)',
-                  'Chứa chữ số (0–9)',
-                  'Chứa ký tự đặc biệt (!@#$…)',
+                  'At least 8 characters',
+                  'Contains uppercase (A–Z)',
+                  'Contains lowercase (a–z)',
+                  'Contains numbers (0–9)',
+                  'Contains special characters (!@#$...)',
                 ].map((rule) => (
                   <li key={rule} className="flex items-center gap-3 text-sm text-indigo-100">
                     <CheckCircle size={16} weight="fill" className="text-indigo-300 shrink-0" />
@@ -257,18 +257,18 @@ export default function ResetPasswordPage() {
 
           {/* Heading */}
           <div className="mb-7">
-            <h2 className="text-2xl font-extrabold text-slate-800">Đặt lại mật khẩu</h2>
+            <h2 className="text-2xl font-extrabold text-slate-800">Reset Password</h2>
             <p className="text-sm text-slate-500 mt-1.5">
-              Nhập mật khẩu mới cho tài khoản của bạn.
+              Enter a new password for your account.
             </p>
           </div>
 
           {/* Invalid token warning */}
           {!tokenFromUrl && (
             <Alert severity="warning" sx={{ borderRadius: '10px', mb: 3 }}>
-              Liên kết không hợp lệ. Vui lòng kiểm tra lại email hoặc{' '}
+              Invalid link. Please check your email again or{' '}
               <Link to="/forgot-password" className="font-semibold underline text-amber-700">
-                yêu cầu liên kết mới
+                request a new link
               </Link>.
             </Alert>
           )}
@@ -315,7 +315,7 @@ export default function ResetPasswordPage() {
               <div>
                 <TextField
                   id="reset-new-password"
-                  label="Mật khẩu mới"
+                  label="New Password"
                   type={showNew ? 'text' : 'password'}
                   autoComplete="new-password"
                   value={newPassword}
@@ -332,7 +332,7 @@ export default function ResetPasswordPage() {
                             onClick={() => setShowNew((v) => !v)}
                             edge="end"
                             size="small"
-                            aria-label={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                            aria-label={showNew ? 'Hide password' : 'Show password'}
                           >
                             {showNew ? <EyeSlash size={18} /> : <Eye size={18} />}
                           </IconButton>
@@ -371,7 +371,7 @@ export default function ResetPasswordPage() {
               {/* Confirm password field */}
               <TextField
                 id="reset-confirm-password"
-                label="Xác nhận mật khẩu mới"
+                label="Confirm New Password"
                 type={showConfirm ? 'text' : 'password'}
                 autoComplete="new-password"
                 value={confirmPassword}
@@ -388,7 +388,7 @@ export default function ResetPasswordPage() {
                           onClick={() => setShowConfirm((v) => !v)}
                           edge="end"
                           size="small"
-                          aria-label={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                          aria-label={showConfirm ? 'Hide password' : 'Show password'}
                         >
                           {showConfirm ? <EyeSlash size={18} /> : <Eye size={18} />}
                         </IconButton>
@@ -416,7 +416,7 @@ export default function ResetPasswordPage() {
                   <CircularProgress size={20} sx={{ color: 'white' }} />
                 ) : (
                   <>
-                    Xác nhận đặt lại mật khẩu
+                    Confirm Password Reset
                     <ArrowRight size={17} weight="bold" />
                   </>
                 )}
@@ -426,7 +426,7 @@ export default function ResetPasswordPage() {
 
           {/* Footer */}
           <p className="mt-10 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} BookNest. Mọi quyền được bảo lưu.
+            © {new Date().getFullYear()} BookNest. All rights reserved.
           </p>
         </div>
       </motion.main>

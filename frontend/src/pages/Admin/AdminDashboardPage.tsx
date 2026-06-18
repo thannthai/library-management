@@ -22,28 +22,32 @@ function StatCard({
   icon: Icon,
   colorClass,
   delay,
+  className = '',
+  isHero = false,
 }: {
   label: string;
   value: string | number;
   icon: React.ElementType;
   colorClass: string;
   delay: number;
+  className?: string;
+  isHero?: boolean;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-white rounded-3xl border border-slate-100 p-5 flex items-center gap-4.5 shadow-sm hover:shadow-md transition-shadow"
+      className={`bg-white rounded-3xl border border-slate-100 p-6 flex items-center gap-5 shadow-sm hover:shadow-md transition-all duration-255 ${className}`}
     >
-      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${colorClass}`}>
-        <Icon size={20} weight="fill" />
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${colorClass}`}>
+        <Icon size={24} weight="fill" />
       </div>
       <div>
-        <p className="text-xl font-black text-slate-800 leading-tight">
+        <p className={`font-black text-slate-800 leading-tight ${isHero ? 'text-2xl md:text-3xl' : 'text-xl'}`}>
           {typeof value === 'number' ? value.toLocaleString() : value}
         </p>
-        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-1">{label}</p>
+        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mt-1.5">{label}</p>
       </div>
     </motion.div>
   );
@@ -66,7 +70,7 @@ export default function AdminDashboardPage() {
         const loansData = await getAdminLoans(null, 0, 5);
         setRecentLoans(loansData.content || []);
       } catch (e: any) {
-        setError(e.message || 'Không thể tải dữ liệu thống kê.');
+        setError(e.message || 'Could not load statistics.');
       } finally {
         setLoading(false);
       }
@@ -88,13 +92,13 @@ export default function AdminDashboardPage() {
           <div>
             <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
               <ChartLineUp size={26} className="text-red-500" />
-              Tổng Quan Hệ Thống
+              System Overview
             </h1>
             <p className="text-sm text-slate-400 font-medium mt-1">BookNest Admin Control Room • Real-time library metrics.</p>
           </div>
           <div className="flex gap-2">
             <Link to="/admin/fulfillment" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow">
-              <ClipboardText size={14} weight="bold" /> Xử lý giao nhận
+              <ClipboardText size={14} weight="bold" /> Fulfillment Counter
             </Link>
           </div>
         </motion.div>
@@ -111,12 +115,12 @@ export default function AdminDashboardPage() {
                 <Warning size={20} weight="fill" />
               </div>
               <div>
-                <h3 className="font-bold text-red-950 text-sm">Cần xử lý: {stats.pendingPickup} đơn đang chờ nhận sách</h3>
-                <p className="text-xs text-red-700/80 mt-0.5">Độc giả đã đặt chỗ và thanh toán. Quá 24h không nhận sách sẽ tự động hủy đơn.</p>
+                <h3 className="font-bold text-red-950 text-sm">Needs Action: {stats.pendingPickup} loan(s) pending pickup</h3>
+                <p className="text-xs text-red-700/80 mt-0.5">Please fulfill the book requests at the counter.</p>
               </div>
             </div>
             <Link to="/admin/fulfillment" className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors self-start sm:self-center">
-              Giao sách ngay
+              Fulfill now
             </Link>
           </motion.div>
         )}
@@ -132,28 +136,37 @@ export default function AdminDashboardPage() {
           <div className="bg-rose-50 border border-rose-100 rounded-3xl p-5 text-sm text-rose-600">{error}</div>
         ) : stats ? (
           /* Stats Grid */
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Money / Revenue Cards (Full width on mobile, 2 columns on desktop) */}
             <StatCard
-              label="Tổng doanh thu"
-              value={stats.totalRevenue ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(stats.totalRevenue) : '0 ₫'}
+              label="Total Revenue"
+              value={stats.totalRevenue ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(stats.totalRevenue) : '0 ₫'}
               icon={CurrencyCircleDollar}
               colorClass="bg-gradient-to-br from-amber-400 to-orange-500 text-white"
               delay={0.01}
+              className="col-span-2"
+              isHero
             />
             <StatCard
-              label="Doanh thu tháng"
-              value={stats.monthlyRevenue ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(stats.monthlyRevenue) : '0 ₫'}
+              label="Monthly Revenue"
+              value={stats.monthlyRevenue ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(stats.monthlyRevenue) : '0 ₫'}
               icon={CurrencyCircleDollar}
               colorClass="bg-gradient-to-br from-rose-500 to-orange-500 text-white"
               delay={0.03}
+              className="col-span-2"
+              isHero
             />
-            <StatCard label="Tổng đơn mượn" value={stats.totalLoans} icon={Books} colorClass="bg-indigo-500 text-white" delay={0.05} />
-            <StatCard label="Chờ nhận sách" value={stats.pendingPickup} icon={ClipboardText} colorClass="bg-red-500 text-white" delay={0.1} />
-            <StatCard label="Đang mượn" value={stats.checkedOut} icon={CheckCircle} colorClass="bg-emerald-500 text-white" delay={0.15} />
-            <StatCard label="Quá hạn" value={stats.overdue} icon={Warning} colorClass="bg-amber-500/90 text-white" delay={0.2} />
-            <StatCard label="Chờ thanh toán" value={stats.pendingPayment} icon={ClockCounterClockwise} colorClass="bg-purple-500 text-white" delay={0.25} />
-            <StatCard label="Đã hoàn thành" value={stats.returned} icon={CheckCircle} colorClass="bg-slate-400 text-white" delay={0.3} />
-            <StatCard label="Tổng kho sách" value={stats.totalBooks} icon={Books} colorClass="bg-cyan-500 text-white" delay={0.35} />
+
+            {/* Row 2: Main Count Metrics */}
+            <StatCard label="Total Loans" value={stats.totalLoans} icon={Books} colorClass="bg-indigo-500 text-white" delay={0.05} />
+            <StatCard label="Pending Pickup" value={stats.pendingPickup} icon={ClipboardText} colorClass="bg-red-500 text-white" delay={0.1} />
+            <StatCard label="Borrowing" value={stats.checkedOut} icon={CheckCircle} colorClass="bg-emerald-500 text-white" delay={0.15} />
+            <StatCard label="Overdue" value={stats.overdue} icon={Warning} colorClass="bg-amber-500/90 text-white" delay={0.2} />
+
+            {/* Row 3: Secondary Metrics & Inventory */}
+            <StatCard label="Pending Payment" value={stats.pendingPayment} icon={ClockCounterClockwise} colorClass="bg-purple-500 text-white" delay={0.25} />
+            <StatCard label="Completed" value={stats.returned} icon={CheckCircle} colorClass="bg-slate-400 text-white" delay={0.3} />
+            <StatCard label="Total Inventory" value={stats.totalBooks} icon={Books} colorClass="bg-cyan-500 text-white" delay={0.35} className="col-span-2" />
           </div>
         ) : null}
 
@@ -164,21 +177,21 @@ export default function AdminDashboardPage() {
             <div>
               <h2 className="text-base font-extrabold text-slate-800 mb-4.5 flex items-center gap-2">
                 <ListBullets size={20} weight="bold" className="text-indigo-600" />
-                Giao Dịch Gần Đây
+                Recent Transactions
               </h2>
               {loading ? (
-                <div className="py-10 text-center text-xs text-slate-400">Đang tải lịch sử...</div>
+                <div className="py-10 text-center text-xs text-slate-400">Loading history...</div>
               ) : recentLoans.length === 0 ? (
-                <div className="py-10 text-center text-xs text-slate-400">Chưa có giao dịch mượn sách nào.</div>
+                <div className="py-10 text-center text-xs text-slate-400">No borrow transactions yet.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-600">
                     <thead>
                       <tr className="text-slate-400 font-semibold border-b border-slate-100 pb-2">
-                        <th className="py-2.5">Sách</th>
-                        <th className="py-2.5">Độc giả</th>
-                        <th className="py-2.5">Ngày mượn</th>
-                        <th className="py-2.5">Trạng thái</th>
+                        <th className="py-2.5">Book</th>
+                        <th className="py-2.5">Reader</th>
+                        <th className="py-2.5">Loan Date</th>
+                        <th className="py-2.5">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -187,7 +200,7 @@ export default function AdminDashboardPage() {
                           <td className="py-3 font-bold text-slate-800 max-w-[180px] truncate">{loan.bookTitle}</td>
                           <td className="py-3 text-slate-500">{loan.userEmail}</td>
                           <td className="py-3 text-slate-400">
-                            {loan.createdAt ? new Date(loan.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                            {loan.createdAt ? new Date(loan.createdAt).toLocaleDateString('en-US') : 'N/A'}
                           </td>
                           <td className="py-3">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
@@ -206,7 +219,7 @@ export default function AdminDashboardPage() {
               )}
             </div>
             <Link to="/admin/loans" className="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:underline">
-              Xem toàn bộ đơn mượn <ArrowRight size={12} />
+              View all loans <ArrowRight size={12} />
             </Link>
           </div>
 
@@ -214,31 +227,31 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col gap-4">
             <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-2">
               <UserGear size={20} weight="bold" className="text-red-500" />
-              Công Cụ Quản Trị
+              Admin Tools
             </h2>
-            <p className="text-xs text-slate-400 leading-relaxed">Truy cập nhanh các phân hệ nghiệp vụ để kiểm soát thông tin.</p>
+            <p className="text-xs text-slate-400 leading-relaxed">Quick access to operational subsystems to manage library data.</p>
             
             <div className="flex flex-col gap-2.5 mt-2">
               <Link to="/admin/books" className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl group transition-all cursor-pointer">
                 <div>
-                  <span className="block text-xs font-bold text-slate-800">📚 Quản Lý Sách</span>
-                  <span className="block text-[10px] text-slate-400 mt-0.5">Thêm, sửa, xóa đầu sách trong kho.</span>
+                  <span className="block text-xs font-bold text-slate-800">📚 Book Inventory</span>
+                  <span className="block text-[10px] text-slate-400 mt-0.5">Add, edit, delete books in catalog.</span>
                 </div>
                 <ArrowRight size={14} className="text-slate-300 group-hover:text-slate-600 transition-colors" />
               </Link>
 
               <Link to="/admin/users" className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl group transition-all cursor-pointer">
                 <div>
-                  <span className="block text-xs font-bold text-slate-800">👥 Quản Lý Người Dùng</span>
-                  <span className="block text-[10px] text-slate-400 mt-0.5">Xem danh sách độc giả & gói VIP.</span>
+                  <span className="block text-xs font-bold text-slate-800">👥 User Management</span>
+                  <span className="block text-[10px] text-slate-400 mt-0.5">View readers list & active VIP plans.</span>
                 </div>
                 <ArrowRight size={14} className="text-slate-300 group-hover:text-slate-600 transition-colors" />
               </Link>
 
               <Link to="/admin/fines" className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl group transition-all cursor-pointer">
                 <div>
-                  <span className="block text-xs font-bold text-slate-800">💸 Thu Phạt & Sự Cố</span>
-                  <span className="block text-[10px] text-slate-400 mt-0.5">Xử lý sách hỏng, mất và nộp phạt.</span>
+                  <span className="block text-xs font-bold text-slate-800">💸 Fines & Issues</span>
+                  <span className="block text-[10px] text-slate-400 mt-0.5">Manage damaged, lost books and settle fines.</span>
                 </div>
                 <ArrowRight size={14} className="text-slate-300 group-hover:text-slate-600 transition-colors" />
               </Link>

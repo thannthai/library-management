@@ -28,24 +28,7 @@ import type { SubscriptionPlan, Subscription } from '../../types/subscription.ty
 import { simulatePayment } from '../../api/paymentsApi';
 import { toast } from 'react-hot-toast';
 
-// Helper to redirect to SePay payment gateway
-const redirectToCheckout = (checkoutFormUrl: string, params: Record<string, string>) => {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = checkoutFormUrl;
 
-  Object.entries(params).forEach(([key, value]) => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = key;
-    input.value = value;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-};
 
 export default function SubscriptionPlansPage() {
   const { user } = useAuth();
@@ -86,7 +69,7 @@ export default function SubscriptionPlansPage() {
         setActiveSub(null);
       }
     } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách gói thành viên.');
+      setError(err.message || 'Failed to load membership plans.');
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +100,7 @@ export default function SubscriptionPlansPage() {
         await loadData();
       }
     } catch (err: any) {
-      alert(err.message || 'Đã xảy ra lỗi khi chọn gói thành viên.');
+      alert(err.message || 'An error occurred while choosing the membership plan.');
       setPurchasingPlanId(null);
     }
   };
@@ -128,13 +111,13 @@ export default function SubscriptionPlansPage() {
     try {
       const txnRef = checkoutData.txnRef;
       await simulatePayment(txnRef);
-      toast.success('🎉 Kích hoạt gói VIP thành công!');
+      toast.success('🎉 VIP Membership activated successfully!');
       setRedirecting(false);
       setCheckoutData(null);
       setPurchasingPlanId(null);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Giả lập thanh toán gói VIP thất bại.');
+      alert(err.message || 'VIP membership payment simulation failed.');
     } finally {
       setSimulating(false);
     }
@@ -145,12 +128,12 @@ export default function SubscriptionPlansPage() {
     if (!activeSub || cancelling) return;
     setCancelling(true);
     try {
-      await cancelSubscription(activeSub.id, cancelReason || 'Hủy gói thành viên');
+      await cancelSubscription(activeSub.id, cancelReason || 'Cancel membership plan');
       setCancelDialogOpen(false);
       setCancelReason('');
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Không thể hủy gói thành viên.');
+      alert(err.message || 'Failed to cancel VIP membership.');
     } finally {
       setCancelling(false);
     }
@@ -163,7 +146,7 @@ export default function SubscriptionPlansPage() {
 
   // Formatter for Currency
   const formatVND = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'VND',
       maximumFractionDigits: 0,
@@ -172,10 +155,10 @@ export default function SubscriptionPlansPage() {
 
   // Formatter for duration label
   const getDurationLabel = (days: number) => {
-    if (days === 30) return '/ tháng';
-    if (days === 90) return '/ 3 tháng';
-    if (days === 365) return '/ năm';
-    return `/ ${days} ngày`;
+    if (days === 30) return '/ month';
+    if (days === 90) return '/ 3 months';
+    if (days === 365) return '/ year';
+    return `/ ${days} days`;
   };
 
   // Fallback helper to retrieve plan features
@@ -185,26 +168,26 @@ export default function SubscriptionPlansPage() {
     }
     if (plan.planCode === 'SILVER') {
       return [
-        "Mượn tối đa 3 cuốn sách đồng thời",
-        "Thời gian giữ sách 14 ngày/cuốn",
-        "Hỗ trợ mượn sách giấy tại quầy nhanh chóng"
+        "Borrow up to 3 books concurrently",
+        "Hold duration: 14 days per book",
+        "Quick physical book checkout at the counter"
       ];
     }
     if (plan.planCode === 'GOLD') {
       return [
-        "Mượn tối đa 10 cuốn sách đồng thời",
-        "Thời gian giữ sách kéo dài 21 ngày/cuốn",
-        "Gia hạn sách trực tuyến tối đa 2 lần",
-        "Được quyền đặt chỗ trước (Reserve) sách hot"
+        "Borrow up to 10 books concurrently",
+        "Hold duration: 21 days per book",
+        "Renew books online up to 2 times",
+        "Priority reservation for popular books"
       ];
     }
     if (plan.planCode === 'PLATINUM') {
       return [
-        "Mượn tối đa 20 cuốn sách đồng thời",
-        "Thời gian giữ sách thoải mái lên đến 30 ngày/cuốn",
-        "Gia hạn trực tuyến & Đặt chỗ trước sách hot",
-        "Ưu tiên xử lý yêu cầu đặt sách 24/7",
-        "Tặng kèm bookmark độc quyền BookNest"
+        "Borrow up to 20 books concurrently",
+        "Hold duration: 30 days per book",
+        "Online renewal & reservation of popular books",
+        "Priority 24/7 support & book processing",
+        "Includes exclusive BookNest bookmark"
       ];
     }
     return [];
@@ -245,42 +228,30 @@ export default function SubscriptionPlansPage() {
                   <Crown size={28} className="text-indigo-400" />
                 </div>
                 
-                <h3 className="text-lg font-bold text-white mb-1">Thanh toán đăng ký hội viên</h3>
+                <h3 className="text-lg font-bold text-white mb-1">Membership Subscription Payment</h3>
                 <p className="text-xs text-indigo-300 tracking-wider uppercase font-semibold mb-6">
-                  Giao dịch: {checkoutData.txnRef}
+                  Transaction: {checkoutData.txnRef}
                 </p>
 
                 {/* Info Card */}
                 <div className="w-full bg-slate-950/60 border border-slate-800 rounded-2xl p-4 mb-6 text-sm text-slate-300 space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Gói đăng ký:</span>
+                    <span className="text-slate-500">Subscription Plan:</span>
                     <span className="font-semibold text-white">{checkoutData.planName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Số tiền thanh toán:</span>
+                    <span className="text-slate-500">Payment Amount:</span>
                     <span className="font-bold text-indigo-300">{formatVND(checkoutData.paymentAmount)}</span>
                   </div>
                 </div>
 
                 <p className="text-xs text-slate-400 mb-6 max-w-xs">
-                  Bạn có thể chọn đi tới cổng thanh toán thực tế của SePay (VietQR) hoặc giả lập thanh toán thành công trực tiếp tại đây.
+                  You can simulate a successful transaction directly to activate your package immediately.
                 </p>
 
                 {/* Actions */}
                 <div className="w-full space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      redirectToCheckout(
-                        checkoutData.sePayCheckout!.checkoutFormUrl,
-                        checkoutData.sePayCheckout!.params
-                      );
-                    }}
-                    className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950"
-                  >
-                    <span>Mở trang thanh toán SePay (Thực tế)</span>
-                    <ArrowRight size={14} weight="bold" />
-                  </button>
+
 
                   <button
                     type="button"
@@ -293,7 +264,7 @@ export default function SubscriptionPlansPage() {
                     ) : (
                       <CheckCircle size={14} weight="bold" />
                     )}
-                    <span>Giả lập thanh toán thành công (Thử nghiệm)</span>
+                    <span>Simulate Payment Success (Testing)</span>
                   </button>
                 </div>
               </div>
@@ -336,16 +307,16 @@ export default function SubscriptionPlansPage() {
             </div>
 
             <h3 className="text-center font-bold text-slate-800 text-lg mb-2">
-              Hủy gói thành viên
+              Cancel Membership Plan
             </h3>
             <p className="text-center text-xs text-slate-500 leading-relaxed mb-4">
-              Bạn có chắc chắn muốn hủy gói thành viên hiện tại? Bạn sẽ mất các đặc quyền mượn sách mở rộng sau khi gói hết hạn.
+              Are you sure you want to cancel your current membership plan? You will lose extended borrowing benefits after expiry.
             </p>
 
             <textarea
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Lý do hủy (không bắt buộc)..."
+              placeholder="Reason for cancellation (optional)..."
               disabled={cancelling}
               className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 h-20 resize-none mb-5"
             />
@@ -357,7 +328,7 @@ export default function SubscriptionPlansPage() {
                 disabled={cancelling}
                 className="flex-1 h-10 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                Quay lại
+                Go Back
               </button>
               <button
                 type="button"
@@ -368,7 +339,7 @@ export default function SubscriptionPlansPage() {
                 {cancelling ? (
                   <CircleNotch size={14} className="animate-spin" />
                 ) : (
-                  'Xác nhận hủy'
+                  'Confirm Cancel'
                 )}
               </button>
             </div>
@@ -400,15 +371,15 @@ export default function SubscriptionPlansPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-slate-800 text-sm">
-                    Gói đang hoạt động: {activeSub.planName}
+                    Active Plan: {activeSub.planName}
                   </h3>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500 text-white">
                     Active
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Giá gói: <span className="font-medium text-slate-700">{formatVND(activeSub.price)}</span> •
-                  Còn lại: <span className="font-medium text-slate-700">{activeSub.daysRemaining} ngày</span> (Hết hạn ngày: {activeSub.endDate})
+                  Price: <span className="font-medium text-slate-700">{formatVND(activeSub.price)}</span> •
+                  Remaining: <span className="font-medium text-slate-700">{activeSub.daysRemaining} days</span> (Expires: {activeSub.endDate})
                 </p>
               </div>
             </div>
@@ -418,7 +389,7 @@ export default function SubscriptionPlansPage() {
               onClick={() => setCancelDialogOpen(true)}
               className="text-xs font-semibold text-rose-500 hover:text-rose-600 cursor-pointer self-start sm:self-center transition-colors hover:underline underline-offset-2"
             >
-              Hủy đăng ký
+              Cancel Subscription
             </button>
           </div>
         )}
@@ -433,17 +404,17 @@ export default function SubscriptionPlansPage() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <CircleNotch size={32} className="animate-spin text-indigo-600 mb-3" />
-            <p className="text-sm text-slate-400">Đang tải danh sách các gói thành viên...</p>
+            <p className="text-sm text-slate-400">Loading plans...</p>
           </div>
         ) : error ? (
           <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-center max-w-md mx-auto">
-            <p className="text-sm text-rose-600 font-semibold mb-3">Đã xảy ra lỗi</p>
+            <p className="text-sm text-rose-600 font-semibold mb-3">An error occurred</p>
             <p className="text-xs text-rose-500 mb-4">{error}</p>
             <button
               onClick={loadData}
               className="px-4 py-2 text-xs font-semibold text-indigo-600 bg-white border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-all cursor-pointer"
             >
-              Thử lại
+              Try again
             </button>
           </div>
         ) : (
@@ -490,7 +461,7 @@ export default function SubscriptionPlansPage() {
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-white/15 backdrop-blur-sm">
-                          Monthly
+                          {plan.durationInDays <= 7 ? 'Weekly' : 'Monthly'}
                         </span>
                       )}
 
@@ -594,7 +565,7 @@ export default function SubscriptionPlansPage() {
         <div className="flex items-center justify-center gap-2 mt-12 text-slate-400 text-xs text-center leading-relaxed max-w-md mx-auto">
           <Info size={14} className="shrink-0" />
           <p>
-            Mọi thanh toán được bảo mật an toàn qua cổng SePay. Gói cước của bạn sẽ tự động kích hoạt ngay sau khi giao dịch thành công.
+            Payments are securely processed. Your plan will activate automatically after successful payment.
           </p>
         </div>
       </div>

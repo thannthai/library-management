@@ -35,10 +35,10 @@ export default function ContactSection() {
           className="mb-12"
         >
           <h2 className="text-[1.75rem] font-extrabold text-slate-900 tracking-tight">
-            Liên hệ với chúng tôi
+            Contact Us
           </h2>
           <p className="text-sm text-slate-400 mt-1.5">
-            Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn
+            We are always ready to listen and support you
           </p>
         </motion.div>
 
@@ -86,15 +86,15 @@ export default function ContactSection() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">Đã gửi thành công!</p>
-                  <p className="text-sm text-slate-500 mt-1">Cảm ơn bạn. Chúng tôi sẽ phản hồi sớm nhất có thể.</p>
+                  <p className="font-bold text-slate-900">Sent successfully!</p>
+                  <p className="text-sm text-slate-500 mt-1">Thank you. We will respond as soon as possible.</p>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
                 {[
-                  { id: 'cn', field: 'name' as const, label: 'Họ và tên', type: 'text', placeholder: 'Nguyễn Văn A' },
-                  { id: 'ce', field: 'email' as const, label: 'Địa chỉ email', type: 'email', placeholder: 'example@email.com' },
+                  { id: 'cn', field: 'name' as const, label: 'Full Name', type: 'text', placeholder: 'John Doe' },
+                  { id: 'ce', field: 'email' as const, label: 'Email Address', type: 'email', placeholder: 'example@email.com' },
                 ].map(({ id, field, label, type, placeholder }) => (
                   <div key={id} className="flex flex-col gap-1.5">
                     <label htmlFor={id} className="text-sm font-semibold text-slate-700">{label}</label>
@@ -108,12 +108,12 @@ export default function ContactSection() {
                   </div>
                 ))}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="cm" className="text-sm font-semibold text-slate-700">Nội dung</label>
+                  <label htmlFor="cm" className="text-sm font-semibold text-slate-700">Message</label>
                   <textarea
                     id="cm" required rows={5}
                     value={form.message}
                     onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-                    placeholder="Nhập tin nhắn của bạn..."
+                    placeholder="Enter your message..."
                     className={`${inputCls} resize-none`}
                   />
                 </div>
@@ -121,7 +121,7 @@ export default function ContactSection() {
                   type="submit"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-[10px] transition-colors duration-200 shadow-lg shadow-indigo-300/35 active:scale-[0.97]"
                 >
-                  Gửi tin nhắn <ArrowRight size={14} weight="bold" />
+                  Send Message <ArrowRight size={14} weight="bold" />
                 </button>
               </form>
             )}
@@ -142,9 +142,9 @@ export default function ContactSection() {
               </span>
             </Link>
             <span className="text-slate-200 text-sm">|</span>
-            <span className="text-xs text-slate-400">© 2026 BookNest. Mọi quyền được bảo lưu.</span>
+            <span className="text-xs text-slate-400">© 2026 BookNest. All rights reserved.</span>
           </div>
-          <p className="text-xs text-slate-400 italic">"Mỗi cuốn sách là một hành trình."</p>
+          <p className="text-xs text-slate-400 italic">"Every book is a journey."</p>
         </div>
       </footer>
     </section>

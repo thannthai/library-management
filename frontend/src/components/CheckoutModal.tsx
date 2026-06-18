@@ -27,10 +27,9 @@ import {
   CheckCircle,
   WarningCircle,
   ArrowClockwise,
-  ArrowRight,
   CircleNotch,
 } from '@phosphor-icons/react';
-import { getBookLoanById } from '../api/loansApi';
+import { getBookLoanById, cancelPendingLoan } from '../api/loansApi';
 import { simulatePayment } from '../api/paymentsApi';
 import type { SePayCheckout } from '../types/subscription.types';
 
@@ -96,7 +95,7 @@ export default function CheckoutModal({
       const remaining = COUNTDOWN_SECONDS - diffSeconds;
       return remaining > 0 ? remaining : 0;
     } catch (err) {
-      console.error("Lỗi khi parse createdAt trong CheckoutModal:", err);
+      console.error("Error parsing createdAt in CheckoutModal:", err);
       return COUNTDOWN_SECONDS;
     }
   });
@@ -106,11 +105,13 @@ export default function CheckoutModal({
   // Refs để clean up interval/timeout đúng cách ngay cả khi component unmount
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopAll = useCallback(() => {
-    console.log("stopAll() triggered, clearing all intervals");
+    console.log("stopAll() triggered, clearing all intervals and timeouts");
     if (countdownRef.current) clearInterval(countdownRef.current);
     if (pollRef.current) clearInterval(pollRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
   }, []);
 
   // ── Short-polling: kiểm tra trạng thái đơn mỗi 3 giây ──────────────────────
@@ -128,7 +129,7 @@ export default function CheckoutModal({
           stopAll();
           setPollState('success');
           // Hiển thị animation success 1.5s rồi thông báo page cha xử lý toast + navigate
-          setTimeout(() => {
+          timeoutRef.current = setTimeout(() => {
             onSuccess();
           }, 1500);
         }
@@ -153,11 +154,16 @@ export default function CheckoutModal({
         const next = prev - 1;
         if (next <= 0) {
           console.log("Countdown reached 0, canceling reservation");
-          if (pollRef.current) clearInterval(pollRef.current);
-          if (countdownRef.current) clearInterval(countdownRef.current);
+          stopAll();
           setPollState('expired');
+          
+          // Gọi API hủy đơn mượn ngay khi hết thời gian giữ chỗ
+          cancelPendingLoan(loanId).catch((err) => {
+            console.error("Lỗi khi tự động hủy đơn mượn hết hạn:", err);
+          });
+
           // Đóng modal sau 2.5s để user đọc thông báo
-          setTimeout(() => {
+          timeoutRef.current = setTimeout(() => {
             onClose('expired');
           }, 2500);
           return 0;
@@ -187,25 +193,7 @@ export default function CheckoutModal({
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  // ── Redirect to SePay fallback function ─────────────────────────────────────
-  const handleRedirectToSePay = () => {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = sePayCheckout.checkoutFormUrl;
-    form.target = '_blank'; // Open in a new tab
 
-    Object.entries(sePayCheckout.params).forEach(([key, value]) => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = value;
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-  };
 
   const handleSimulatePayment = async () => {
     if (simulating) return;
@@ -214,7 +202,7 @@ export default function CheckoutModal({
       const txnRef = sePayCheckout.description || sePayCheckout.params?.order_description || '';
       await simulatePayment(txnRef);
     } catch (err: any) {
-      alert(err.message || 'Giả lập thanh toán thất bại.');
+      alert(err.message || 'Payment simulation failed.');
     } finally {
       setSimulating(false);
     }
@@ -283,10 +271,10 @@ export default function CheckoutModal({
                   <CheckCircle size={72} weight="fill" className="text-emerald-400" />
                 </motion.div>
                 <div>
-                  <p className="text-xl font-extrabold text-white">Thanh toán thành công!</p>
+                  <p className="text-xl font-extrabold text-white">Payment Successful!</p>
                   <p className="text-sm text-slate-400 mt-1">
-                    Đơn mượn đã xác nhận.<br/>
-                    <span className="text-emerald-400 font-medium">Ra quầy thư viện để nhận sách nhé!</span>
+                    Loan request confirmed.<br/>
+                    <span className="text-emerald-400 font-medium">Please collect your book at the library counter!</span>
                   </p>
                 </div>
               </motion.div>
@@ -307,9 +295,9 @@ export default function CheckoutModal({
                   <WarningCircle size={72} weight="fill" className="text-rose-400" />
                 </motion.div>
                 <div>
-                  <p className="text-xl font-extrabold text-white">Hết thời gian giữ chỗ</p>
+                  <p className="text-xl font-extrabold text-white">Hold Time Expired</p>
                   <p className="text-sm text-slate-400 mt-1">
-                    Đơn mượn đã tự động hủy. Vui lòng thử lại.
+                    The loan request has been automatically canceled. Please try again.
                   </p>
                 </div>
               </motion.div>
@@ -328,7 +316,7 @@ export default function CheckoutModal({
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-                      Thanh toán qua SePay
+                      Pay via SePay
                     </p>
                     <p
                       className="text-sm font-bold text-white truncate mt-0.5"
@@ -358,28 +346,28 @@ export default function CheckoutModal({
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-500">
                         <CircleNotch size={32} className="animate-spin text-indigo-600 mb-2" />
-                        <span className="text-[10px]">Đang tạo mã QR...</span>
+                        <span className="text-[10px]">Generating QR code...</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Chi tiết chuyển khoản */}
+                  {/* Transfer Details */}
                   <div className="w-full space-y-2 text-xs text-slate-300 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Ngân hàng:</span>
+                      <span className="text-slate-500">Bank:</span>
                       <span className="font-semibold text-white">{sePayCheckout.bankCode || 'Techcombank (TCB)'}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Số tài khoản:</span>
+                      <span className="text-slate-500">Account Number:</span>
                       <span className="font-semibold text-white font-mono">{sePayCheckout.bankAccount || '93767'}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Số tiền:</span>
-                      <span className="font-bold text-indigo-300">15.000 ₫</span>
+                      <span className="text-slate-500">Amount:</span>
+                      <span className="font-bold text-indigo-300">15,000 ₫</span>
                     </div>
                     <div className="border-t border-slate-800/80 my-2 pt-2">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-slate-500">Nội dung chuyển khoản:</span>
+                        <span className="text-slate-500">Transfer Description:</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -388,7 +376,7 @@ export default function CheckoutModal({
                           }}
                           className="px-2 py-1 rounded bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 font-bold text-[10px] cursor-pointer transition-colors"
                         >
-                          Sao chép
+                          Copy
                         </button>
                       </div>
                       <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-center">
@@ -400,17 +388,7 @@ export default function CheckoutModal({
                   </div>
                 </div>
 
-                {/* Hoặc mở trang SePay */}
-                <div className="mb-3">
-                  <button
-                    type="button"
-                    onClick={handleRedirectToSePay}
-                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950"
-                  >
-                    <span>Thanh toán qua cổng SePay (Thẻ/ATM/QR)</span>
-                    <ArrowRight size={14} weight="bold" />
-                  </button>
-                </div>
+
 
                 {/* Giả lập thanh toán thành công (Thử nghiệm) */}
                 <div className="mb-5">
@@ -425,7 +403,7 @@ export default function CheckoutModal({
                     ) : (
                       <CheckCircle size={14} weight="bold" />
                     )}
-                    <span>Giả lập thanh toán thành công (Thử nghiệm)</span>
+                    <span>Simulate Payment Success (Testing)</span>
                   </button>
                 </div>
 
@@ -478,7 +456,7 @@ export default function CheckoutModal({
                         {formatTime(secondsLeft)}
                       </p>
                       <p className="text-[11px] text-slate-500 leading-tight">
-                        Còn lại để thanh toán
+                        Remaining to pay
                       </p>
                     </div>
                   </div>
@@ -491,11 +469,11 @@ export default function CheckoutModal({
                         transition={{ duration: 1.5, repeat: Infinity }}
                         className="w-2 h-2 rounded-full bg-emerald-400"
                       />
-                      <span className="text-[11px] text-slate-400">Đang kiểm tra…</span>
+                      <span className="text-[11px] text-slate-400">Checking…</span>
                     </div>
                     <span className="text-[10px] text-slate-600 flex items-center gap-1">
                       <ArrowClockwise size={10} />
-                      cứ mỗi 3 giây
+                      every 3 seconds
                     </span>
                   </div>
                 </div>
@@ -515,15 +493,15 @@ export default function CheckoutModal({
                     >
                       <WarningCircle size={14} weight="fill" className="text-rose-400 shrink-0" />
                       <p className="text-xs text-rose-300">
-                        Sắp hết giờ! Vui lòng quét QR ngay để tránh hủy đơn.
-      </p>
+                        Almost out of time! Please scan QR now to avoid cancelation.
+                      </p>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 {/* Footer hint */}
                 <p className="text-center text-[11px] text-slate-600 mt-4">
-                  Đơn sẽ tự động hủy nếu chưa thanh toán trong thời gian trên
+                  The order will be automatically canceled if payment is not completed within the time limit.
                 </p>
               </>
             )}

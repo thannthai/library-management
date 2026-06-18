@@ -12,7 +12,8 @@ export default function Navbar() {
   const [activeSection, setActive]  = useState('home');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<number | null>(null);
   const { user, logout } = useAuth();
 
   const handleLogoutClick = () => {
@@ -39,33 +40,94 @@ export default function Navbar() {
   // ── Active section tracking (only on landing) ──────────────────────────────
   useEffect(() => {
     if (!isLanding) return;
-    const map: Record<string, number> = {};
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => { map[e.target.id] = e.intersectionRatio; });
-        const top = Object.entries(map).sort(([, a], [, b]) => b - a)[0];
-        if (top) setActive(top[0]);
-      },
-      { threshold: [0, 0.2, 0.5, 0.75, 1] }
-    );
-    LANDING_SECTION_IDS.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observerRef.current?.observe(el);
-    });
-    return () => observerRef.current?.disconnect();
+
+    const handleScroll = () => {
+      if (isScrollingRef.current) return;
+
+      const scrollPos = window.scrollY + 120; // 120px offset for active section threshold (64px header + some margin)
+
+      // Handle bottom of page
+      const isBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 50;
+      if (isBottom) {
+        setActive(LANDING_SECTION_IDS[LANDING_SECTION_IDS.length - 1]);
+        return;
+      }
+
+      for (const id of LANDING_SECTION_IDS) {
+        const el = document.getElementById(id);
+        if (el) {
+          const top = el.offsetTop - 80; // 80px scroll margin top offset
+          const height = el.offsetHeight;
+          if (scrollPos >= top && scrollPos < top + height) {
+            setActive(id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Run once on mount to set initial section
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
   }, [isLanding]);
+
+  // Handle scroll to state when navigating from another page
+  useEffect(() => {
+    if (isLanding && location.state?.scrollTo) {
+      const target = location.state.scrollTo;
+      setActive(target);
+      isScrollingRef.current = true;
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      
+      const el = document.getElementById(target);
+      if (el) {
+        const timer = setTimeout(() => {
+          const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({
+            top: elementPosition - 80,
+            behavior: 'smooth'
+          });
+        }, 120);
+        
+        scrollTimeoutRef.current = window.setTimeout(() => {
+          isScrollingRef.current = false;
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isLanding, location.state]);
 
   // ── Navigation logic ───────────────────────────────────────────────────────
   /**
    * Handles hash-section links:
-   * - On landing page (/) → smooth scroll to section
+   * - On landing page (/) → smooth scroll to section with 80px offset
    * - On other pages    → navigate to / carrying `scrollTo` state, then LandingPage
    *   picks it up and scrolls after mount
    */
   const handleSectionClick = (sectionId: string) => {
     setMobileOpen(false);
+    setActive(sectionId); // Immediately set active section to make underline jump directly
+    isScrollingRef.current = true;
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+
     if (isLanding) {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      const el = document.getElementById(sectionId);
+      if (el) {
+        const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({
+          top: elementPosition - 80, // Offset 80px scroll-margin-top
+          behavior: 'smooth'
+        });
+      }
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 800); // Lock scroll spy for 800ms
     } else {
       navigate('/', { state: { scrollTo: sectionId } });
     }
@@ -194,7 +256,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={handleLogoutClick}
-                  title="Đăng xuất"
+                  title="Logout"
                   className="cursor-pointer p-2 text-slate-400 hover:text-red-500 hover:bg-red-50/60 rounded-lg transition-colors duration-200"
                 >
                   <SignOut size={18} />
@@ -206,13 +268,13 @@ export default function Navbar() {
                   to="/login"
                   className="cursor-pointer px-3.5 py-2 text-sm font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors duration-200"
                 >
-                  Đăng nhập
+                  Login
                 </Link>
                 <Link
                   to="/register"
                   className="cursor-pointer px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200 shadow-md shadow-indigo-300/40 active:scale-[0.97]"
                 >
-                  Đăng ký
+                  Register
                 </Link>
               </>
             )}
@@ -223,7 +285,7 @@ export default function Navbar() {
             type="button"
             className="md:hidden cursor-pointer p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 transition-colors"
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X size={21} weight="bold" /> : <List size={21} weight="bold" />}
@@ -257,7 +319,7 @@ export default function Navbar() {
                       onClick={handleLogoutClick}
                       className="cursor-pointer text-left text-sm font-medium text-red-500 py-2 hover:text-red-600 transition-colors"
                     >
-                      Đăng xuất
+                      Logout
                     </button>
                   </>
                 ) : (
@@ -267,14 +329,14 @@ export default function Navbar() {
                       onClick={() => setMobileOpen(false)}
                       className="cursor-pointer text-left text-sm font-medium text-slate-600 py-2 hover:text-indigo-600 transition-colors"
                     >
-                      Đăng nhập
+                      Login
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setMobileOpen(false)}
                       className="cursor-pointer text-sm font-semibold bg-indigo-600 text-white py-2.5 rounded-xl hover:bg-indigo-700 transition-colors active:scale-[0.97] text-center"
                     >
-                      Đăng ký
+                      Register
                     </Link>
                   </>
                 )}
@@ -309,10 +371,10 @@ export default function Navbar() {
             </div>
             {/* Text */}
             <h2 className="text-center text-lg font-bold text-slate-800 mb-2">
-              Xác nhận đăng xuất
+              Confirm Logout
             </h2>
             <p className="text-center text-sm text-slate-500 leading-relaxed">
-              Bạn có chắc chắn muốn đăng xuất khỏi BookNest?
+              Are you sure you want to log out of BookNest?
             </p>
             {/* Buttons */}
             <div className="flex gap-3 mt-6">
@@ -321,14 +383,14 @@ export default function Navbar() {
                 onClick={() => setLogoutConfirmOpen(false)}
                 className="flex-1 h-10 rounded-xl border-2 border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                Hủy
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmLogout}
                 className="flex-1 h-10 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition-colors cursor-pointer"
               >
-                Đăng xuất
+                Logout
               </button>
             </div>
           </div>

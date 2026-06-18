@@ -33,7 +33,7 @@ export default function FavoritesPage() {
       const data = await getMyFavorites();
       setBooks(data);
     } catch (e) {
-      toast.error('Lỗi khi tải danh sách yêu thích');
+      toast.error('Error loading favorites');
     } finally {
       setLoading(false);
     }
@@ -47,11 +47,11 @@ export default function FavoritesPage() {
     e.stopPropagation();
     try {
       await removeFavorite(bookId);
-      toast.success('Đã xóa khỏi danh sách yêu thích');
+      toast.success('Removed from favorites');
       setBooks(prev => prev.filter(b => b.id !== bookId));
       if (selected?.id === bookId) setSelected(null);
     } catch (err) {
-      toast.error('Không thể xóa yêu thích.');
+      toast.error('Could not remove from favorites.');
     }
   };
 
@@ -61,7 +61,7 @@ export default function FavoritesPage() {
     try {
       const loanData = await borrowBook(selected.id);
       if (loanData.sePayCheckout === null || loanData.sePayCheckout === undefined) {
-        toast.success('Mượn sách thành công theo gói hội viên!');
+        toast.success('Book borrowed successfully under your membership plan!');
         setSelected(null);
       } else {
         setSelected(null);
@@ -70,7 +70,7 @@ export default function FavoritesPage() {
         setCheckoutBookTitle(selected.title);
       }
     } catch (err: any) {
-      toast.error(err.message || 'Mượn sách thất bại! Sách có thể đã hết hoặc có người đặt trước.');
+      toast.error(err.message || 'Borrowing failed! The book might be out of copies or reserved by someone else.');
     } finally {
       setBorrowing(false);
     }
@@ -89,7 +89,7 @@ export default function FavoritesPage() {
             onSuccess={() => {
               setCheckoutLoanId(null);
               setCheckoutSePayData(null);
-              toast.success('Thanh toán thành công! Sách đang chờ bạn ra quầy nhận.');
+              toast.success('Payment successful! The book is ready for pickup at the counter.');
             }}
             onClose={() => {
               setCheckoutLoanId(null);
@@ -105,10 +105,10 @@ export default function FavoritesPage() {
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
           <h1 className="text-2xl font-extrabold text-slate-800">
-            Danh Sách <span className="text-rose-500">Yêu Thích</span>
+            My <span className="text-rose-500">Favorites</span>
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Nơi lưu giữ những cuốn sách bạn quan tâm để mượn sau này.
+            Your saved books to borrow later.
           </p>
         </motion.div>
 
@@ -116,7 +116,7 @@ export default function FavoritesPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
             <CircleNotch size={32} className="animate-spin text-indigo-600 mb-3" />
-            <p className="text-sm text-slate-400">Đang tải danh sách yêu thích...</p>
+            <p className="text-sm text-slate-400">Loading favorites...</p>
           </div>
         ) : books.length === 0 ? (
           <motion.div
@@ -127,17 +127,17 @@ export default function FavoritesPage() {
             <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 mb-4 animate-pulse">
               <Heart size={28} weight="fill" />
             </div>
-            <h3 className="font-bold text-slate-800 text-base">Danh sách trống</h3>
+            <h3 className="font-bold text-slate-800 text-base">No favorites yet</h3>
             <p className="text-sm text-slate-500 mt-1.5 max-w-sm leading-relaxed">
-              Bạn chưa lưu cuốn sách yêu thích nào. Nhấp vào biểu tượng Bookmark trên các thẻ sách để lưu chúng lại đây.
+              You haven't saved any favorite books yet. Click the Heart icon on book cards to save them here.
             </p>
           </motion.div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
             <AnimatePresence>
               {books.map((book) => {
-                const genreName = book.genres && book.genres.length > 0 ? book.genres[0].name : 'Khác';
-                const authorName = book.authors && book.authors.length > 0 ? book.authors.map(a => a.name).join(', ') : 'Chưa rõ';
+                const genreName = book.genres && book.genres.length > 0 ? book.genres[0].name : 'Other';
+                const authorName = book.authors && book.authors.length > 0 ? book.authors.map(a => a.name).join(', ') : 'Unknown';
 
                 return (
                   <motion.div
@@ -169,7 +169,7 @@ export default function FavoritesPage() {
                         type="button"
                         onClick={(e) => handleRemoveFavorite(book.id, e)}
                         className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg bg-rose-500 flex items-center justify-center text-white shadow shadow-rose-200 hover:bg-rose-600 transition-colors cursor-pointer"
-                        title="Bỏ yêu thích"
+                        title="Remove from favorites"
                       >
                         <Heart size={14} weight="fill" />
                       </button>
@@ -187,7 +187,7 @@ export default function FavoritesPage() {
                         {authorName}
                       </p>
                       <p className="text-[10px] text-slate-400">
-                        Có sẵn: {book.availableCopies}/{book.totalCopies}
+                        Available: {book.availableCopies}/{book.totalCopies}
                       </p>
                     </div>
                   </motion.div>
@@ -239,20 +239,20 @@ export default function FavoritesPage() {
                   </div>
                   <div className="flex-1 min-w-0 pt-1">
                     <span className="text-[10px] font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
-                      {selected.genres?.[0]?.name || 'Khác'}
+                      {selected.genres?.[0]?.name || 'Other'}
                     </span>
                     <h2 className="text-base font-bold text-slate-800 mt-2 leading-tight">{selected.title}</h2>
                     <p className="text-xs text-slate-500 mt-1">
-                      {selected.authors?.map(a => a.name).join(', ') || 'Chưa rõ'}
+                      {selected.authors?.map(a => a.name).join(', ') || 'Unknown'}
                     </p>
                     <p className="text-[10px] text-slate-400 mt-1">ISBN: {selected.isbn}</p>
                   </div>
                 </div>
 
                 <div className="p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Giới thiệu sách</h3>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Description</h3>
                   <p className="text-xs text-slate-600 leading-relaxed max-h-40 overflow-y-auto pr-1">
-                    {selected.description || 'Chưa có mô tả chi tiết.'}
+                    {selected.description || 'No description available.'}
                   </p>
 
                   <div className="flex gap-3 mt-6">
@@ -263,7 +263,7 @@ export default function FavoritesPage() {
                       className="flex-1 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {borrowing ? <CircleNotch size={14} className="animate-spin" /> : <Books size={14} />}
-                      {selected.availableCopies > 0 ? 'Mượn ngay' : 'Hết bản sao'}
+                      {selected.availableCopies > 0 ? 'Borrow Now' : 'Out of Copies'}
                     </button>
                     
                     <button
@@ -271,7 +271,7 @@ export default function FavoritesPage() {
                       onClick={(e) => { handleRemoveFavorite(selected.id, e); }}
                       className="h-10 px-4 rounded-xl border border-rose-200 text-rose-500 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1"
                     >
-                      Bỏ yêu thích
+                      Remove Favorite
                     </button>
                   </div>
                 </div>

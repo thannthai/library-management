@@ -11,6 +11,11 @@ export const getGenres = async (): Promise<GenreResponse[]> => {
   return data.data;
 };
 
+export const getFeaturedBooks = async (): Promise<BookResponse[]> => {
+  const { data } = await axiosClient.get<{ data: BookResponse[] }>('/books/featured');
+  return data.data;
+};
+
 export const createBook = async (bookData: any): Promise<BookResponse> => {
   const { data } = await axiosClient.post<{ data: BookResponse }>('/books', bookData);
   return data.data;

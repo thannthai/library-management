@@ -21,6 +21,7 @@ import {
   User as UserIcon,
   CircleNotch,
   CalendarCheck,
+  ArrowRight,
 } from '@phosphor-icons/react';
 import { toast } from 'react-hot-toast';
 
@@ -32,9 +33,10 @@ import DashboardLayout from '../../layouts/DashboardLayout';
 import CheckoutModal from '../../components/CheckoutModal';
 import { GENRE_COLOR_MAP } from '../../data/landingMockData';
 import type { BookResponse, GenreResponse } from '../../types/books.types';
+import type { BookLoanResponse } from '../../types/loans.types';
 import type { SePayCheckout } from '../../types/subscription.types';
 import { getBooks, getGenres } from '../../api/booksApi';
-import { borrowBook, cancelPendingLoan, getMyLoans } from '../../api/loansApi';
+import { borrowBook, cancelPendingLoan, getMyLoans, getLoanPaymentUrl } from '../../api/loansApi';
 import { getMyFavorites, toggleFavorite } from '../../api/favoritesApi';
 import { reserveBook } from '../../api/reservationsApi';
 import { getActiveSubscription } from '../../api/subscriptionApi';
@@ -221,11 +223,13 @@ function BookCover({
 }
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: 'available' | 'checked_out' | 'borrowing' }) {
+function StatusBadge({ status }: { status: 'available' | 'checked_out' | 'borrowing' | 'pending_payment' | 'pending_pickup' }) {
   const map = {
-    available:   { label: 'Available',   cls: 'bg-emerald-500 text-white' },
-    checked_out: { label: 'Checked Out', cls: 'bg-rose-500 text-white' },
-    borrowing:   { label: 'Borrowing',   cls: 'bg-indigo-600 text-white' },
+    available:       { label: 'Available',   cls: 'bg-emerald-500 text-white' },
+    checked_out:     { label: 'Checked Out', cls: 'bg-rose-500 text-white' },
+    borrowing:       { label: 'Borrowing',   cls: 'bg-indigo-600 text-white' },
+    pending_payment: { label: 'Pending Payment', cls: 'bg-amber-500 text-white' },
+    pending_pickup:  { label: 'Pending Pickup', cls: 'bg-blue-500 text-white' },
   };
   const { label, cls } = map[status];
   return (
@@ -240,25 +244,31 @@ function StatusBadge({ status }: { status: 'available' | 'checked_out' | 'borrow
 function BookCard({
   book,
   onSelect,
-  isBorrowing,
+  activeLoan,
   isFavorite,
   onToggleFavorite,
 }: {
   book: BookResponse;
   onSelect: () => void;
-  isBorrowing?: boolean;
+  activeLoan?: BookLoanResponse;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
 }) {
-  const genreName = book.genres && book.genres.length > 0 ? book.genres[0].name : 'Khác';
+  const genreName = book.genres && book.genres.length > 0 ? book.genres[0].name : 'Other';
   const genreColor = getGenreColor(genreName);
   const pillCls = GENRE_COLOR_MAP[genreColor] ?? 'bg-slate-100 text-slate-600';
-  const authorName = book.authors && book.authors.length > 0 ? book.authors.map((a) => a.name).join(', ') : 'Chưa rõ tác giả';
-  const copiesStr = `${book.availableCopies}/${book.totalCopies} cuốn`;
+  const authorName = book.authors && book.authors.length > 0 ? book.authors.map((a) => a.name).join(', ') : 'Unknown Author';
+  const copiesStr = `${book.availableCopies}/${book.totalCopies} copies`;
   const isAvailable = book.availableCopies > 0;
-  const status: 'available' | 'checked_out' | 'borrowing' = isBorrowing
-    ? 'borrowing'
-    : (isAvailable ? 'available' : 'checked_out');
+  
+  let status: 'available' | 'checked_out' | 'borrowing' | 'pending_payment' | 'pending_pickup';
+  if (activeLoan) {
+    if (activeLoan.status === 'PENDING_PAYMENT') status = 'pending_payment';
+    else if (activeLoan.status === 'PENDING_PICKUP') status = 'pending_pickup';
+    else status = 'borrowing';
+  } else {
+    status = isAvailable ? 'available' : 'checked_out';
+  }
 
   return (
     <motion.div
@@ -335,16 +345,16 @@ function BookDetailDialog({
   book,
   onClose,
   onBorrowPaid,
-  isBorrowing,
+  activeLoan,
   isFavorite,
   onToggleFavorite,
   isVip,
 }: {
   book: BookResponse | null;
-  onClose: () => void;
+  onClose: (needRefresh?: boolean) => void;
   /** Gọi khi mượn lẻ thành công — truyền loanId + sePayCheckout để mở CheckoutModal */
   onBorrowPaid: (loanId: number, sePayCheckout: SePayCheckout, bookTitle: string) => void;
-  isBorrowing?: boolean;
+  activeLoan?: BookLoanResponse;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   /** true nếu user đang có gói VIP hợp lệ */
@@ -354,17 +364,25 @@ function BookDetailDialog({
 
   const [borrowing, setBorrowing] = useState(false);
   const [reserving, setReserving] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const navigate = useNavigate();
 
-  const genreName = book.genres && book.genres.length > 0 ? book.genres[0].name : 'Khác';
+  const genreName = book.genres && book.genres.length > 0 ? book.genres[0].name : 'Other';
   const genreColor = getGenreColor(genreName);
   const pillCls = GENRE_COLOR_MAP[genreColor] ?? 'bg-slate-100 text-slate-600';
-  const authorName = book.authors && book.authors.length > 0 ? book.authors.map((a) => a.name).join(', ') : 'Chưa rõ tác giả';
-  const copiesStr = `${book.availableCopies}/${book.totalCopies} cuốn`;
+  const authorName = book.authors && book.authors.length > 0 ? book.authors.map((a) => a.name).join(', ') : 'Unknown Author';
+  const copiesStr = `${book.availableCopies}/${book.totalCopies} copies`;
   const isAvailable = book.availableCopies > 0;
-  const status: 'available' | 'checked_out' | 'borrowing' = isBorrowing
-    ? 'borrowing'
-    : (isAvailable ? 'available' : 'checked_out');
+
+  let status: 'available' | 'checked_out' | 'borrowing' | 'pending_payment' | 'pending_pickup';
+  if (activeLoan) {
+    if (activeLoan.status === 'PENDING_PAYMENT') status = 'pending_payment';
+    else if (activeLoan.status === 'PENDING_PICKUP') status = 'pending_pickup';
+    else status = 'borrowing';
+  } else {
+    status = isAvailable ? 'available' : 'checked_out';
+  }
 
   const handleBorrow = async () => {
     if (!book) return;
@@ -373,26 +391,51 @@ function BookDetailDialog({
       const loanData = await borrowBook(book.id);
 
       if (loanData.sePayCheckout === null || loanData.sePayCheckout === undefined) {
-        // Nhánh 1: User có gói Subscription hợp lệ → mượn ngay, không cần thanh toán
-        toast.success('Mượn sách thành công theo gói hội viên!');
-        // Giữ nguyên trang để user tiếp tục lướt sách, KHÔNG chuyển hướng
+        toast.success('Book borrowed successfully under membership plan!');
         onClose();
       } else {
-        // Nhánh 2: User mượn lẻ → cần thanh toán → mở CheckoutModal
-        // TUYỆT ĐỐI KHÔNG toast success ở đây
         onClose();
         onBorrowPaid(loanData.id, loanData.sePayCheckout, book.title);
       }
     } catch (err: any) {
-      console.error('Lỗi khi mượn sách:', err);
+      console.error('Failed to borrow book:', err);
       const serverMessage = err.message || err.response?.data?.message;
       if (serverMessage) {
         toast.error(serverMessage);
       } else {
-        toast.error('Mượn sách thất bại! Sách có thể đã có người khác giữ chỗ trước. Vui lòng thử lại.');
+        toast.error('Failed to borrow book! The book might have been reserved by someone else. Please try again.');
       }
     } finally {
       setBorrowing(false);
+    }
+  };
+
+  const handlePayPending = async () => {
+    if (!activeLoan) return;
+    setPaying(true);
+    try {
+      const sePayCheckout = await getLoanPaymentUrl(activeLoan.id);
+      onClose();
+      onBorrowPaid(activeLoan.id, sePayCheckout, book.title);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Could not retrieve payment details. Please try again.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handleCancelLoan = async () => {
+    if (!activeLoan) return;
+    if (!window.confirm("Are you sure you want to cancel this loan request?")) return;
+    setCancelling(true);
+    try {
+      await cancelPendingLoan(activeLoan.id);
+      toast.success("Loan request cancelled successfully.");
+      onClose(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Could not cancel loan request.');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -403,13 +446,13 @@ function BookDetailDialog({
       toast(
         (
           <span>
-            Tính năng đặt trước chỉ dành cho hội viên VIP. 
+            Reservation is a VIP-only feature. 
             <button
               type="button"
               onClick={() => { navigate('/dashboard/subscriptions'); }}
               style={{ color: '#6366f1', fontWeight: 700, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
             >
-              Nâng cấp ngay →
+              Upgrade now →
             </button>
           </span>
         ),
@@ -420,11 +463,11 @@ function BookDetailDialog({
     setReserving(true);
     try {
       await reserveBook(book.id);
-      toast.success(`Đã đặt trước “${book.title}” thành công! Bạn sẽ được thông báo khi sách về quầy.`);
+      toast.success(`Successfully reserved “${book.title}”! You will be notified when it is available for pickup.`);
       onClose();
     } catch (err: any) {
       const serverMessage = err?.response?.data?.message || err?.message;
-      toast.error(serverMessage || 'Không thể đặt trước. Vui lòng thử lại.');
+      toast.error(serverMessage || 'Failed to reserve book. Please try again.');
     } finally {
       setReserving(false);
     }
@@ -433,7 +476,7 @@ function BookDetailDialog({
   return (
     <Dialog
       open={Boolean(book)}
-      onClose={onClose}
+      onClose={() => onClose()}
       maxWidth="sm"
       fullWidth
       slotProps={{
@@ -449,7 +492,7 @@ function BookDetailDialog({
       <DialogContent sx={{ padding: 0 }}>
         <div className="relative">
           <IconButton
-            onClick={onClose}
+            onClick={() => onClose()}
             size="small"
             sx={{
               position: 'absolute', top: 10, right: 10, zIndex: 10,
@@ -496,18 +539,57 @@ function BookDetailDialog({
           <div className="p-5">
             <h3 className="text-sm font-semibold text-slate-700 mb-2">About this book</h3>
             <p className="text-sm text-slate-600 leading-relaxed max-h-48 overflow-y-auto pr-1">
-              {book.description || 'Chưa có mô tả chi tiết cho cuốn sách này.'}
+              {book.description || 'No detailed description available for this book.'}
             </p>
 
             <div className="flex gap-3 mt-6">
-              {isBorrowing ? (
+              {activeLoan && activeLoan.status === 'PENDING_PAYMENT' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCancelLoan}
+                    disabled={cancelling || paying}
+                    className="flex-1 h-10 rounded-xl border-2 border-rose-200 text-rose-600 text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {cancelling ? (
+                      <CircleNotch size={15} className="animate-spin" />
+                    ) : (
+                      'Cancel Request'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePayPending}
+                    disabled={paying || cancelling}
+                    className="flex-1 h-10 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {paying ? (
+                      <CircleNotch size={15} className="animate-spin" />
+                    ) : (
+                      <>
+                        Pay Now
+                        <ArrowRight size={15} weight="bold" />
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : activeLoan && activeLoan.status === 'PENDING_PICKUP' ? (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={15} weight="fill" className="text-blue-600" />
+                  Pending pickup at counter
+                </button>
+              ) : activeLoan && (activeLoan.status === 'CHECKED_OUT' || activeLoan.status === 'OVERDUE' ? true : false) ? (
                 <button
                   type="button"
                   disabled
                   className="flex-1 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <CheckCircle size={15} weight="fill" className="text-indigo-600" />
-                  Bạn đang mượn sách này
+                  You are borrowing this book
                 </button>
               ) : isAvailable ? (
                 <>
@@ -554,11 +636,11 @@ function BookDetailDialog({
                     ) : (
                       <CalendarCheck size={15} />
                     )}
-                    {reserving ? 'Đang đặt...' : isVip ? 'Reserve' : 'Reserve (VIP only)'}
+                    {reserving ? 'Reserving...' : isVip ? 'Reserve' : 'Reserve (VIP only)'}
                   </button>
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={() => onClose()}
                     className="h-10 px-5 rounded-xl border-2 border-slate-200 text-slate-500 text-sm font-medium hover:border-slate-300 transition-colors cursor-pointer"
                   >
                     Close
@@ -586,41 +668,58 @@ function Pagination({
   if (total <= 1) return null;
 
   const btnCls = (active: boolean, disabled = false) => [
-    'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-semibold border transition-all duration-150',
-    active ? 'bg-indigo-600 border-indigo-600 text-white' : '',
-    !active && !disabled ? 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 cursor-pointer shadow-sm' : '',
-    disabled ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' : '',
+    'w-9 h-9 rounded-xl flex items-center justify-center text-sm font-semibold border transition-all duration-150',
+    active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200/60' : '',
+    !active && !disabled ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 cursor-pointer' : '',
+    disabled ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed pointer-events-none' : '',
   ].filter(Boolean).join(' ');
 
-  const pages = [];
-  for (let i = 1; i <= total; i++) {
-    pages.push(i);
+  // Build page number list with ellipsis markers
+  const pages: (number | '...')[] = [];
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end   = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
   }
 
   return (
-    <div className="flex items-center justify-center gap-1.5 mt-8 pb-4">
+    <div className="flex items-center justify-center gap-1.5 mt-8 pb-4 select-none">
       <button
         className={btnCls(false, current === 1)}
         onClick={() => onChange(current - 1)}
         disabled={current === 1}
+        aria-label="Previous page"
       >
-        Trước
+        ‹
       </button>
-      {pages.map((p) => (
-        <button
-          key={p}
-          className={btnCls(p === current)}
-          onClick={() => onChange(p)}
-        >
-          {p}
-        </button>
-      ))}
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`ellipsis-${i}`} className="w-9 h-9 flex items-center justify-center text-slate-400 text-sm">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            className={btnCls(p === current)}
+            onClick={() => onChange(p as number)}
+          >
+            {p}
+          </button>
+        )
+      )}
       <button
         className={btnCls(false, current === total)}
         onClick={() => onChange(current + 1)}
         disabled={current === total}
+        aria-label="Next page"
       >
-        Sau
+        ›
       </button>
     </div>
   );
@@ -650,7 +749,7 @@ export default function DashboardBrowseBooksPage() {
 
   const [selected, setSelected] = useState<BookResponse | null>(null);
   const [filterOpen, setFilterOpen] = useState(false); // mobile filter drawer
-  const [borrowingBookIds, setBorrowingBookIds] = useState<Set<number>>(new Set());
+  const [activeLoansMap, setActiveLoansMap] = useState<Record<number, BookLoanResponse>>({});
 
   // State cho CheckoutModal (mượn lẻ trả tiền)
   const [checkoutLoanId, setCheckoutLoanId] = useState<number | null>(null);
@@ -667,7 +766,7 @@ export default function DashboardBrowseBooksPage() {
         const favs = await getMyFavorites();
         setFavoriteBookIds(new Set(favs.map(b => b.id)));
       } catch (err) {
-        console.error('Lỗi khi lấy danh sách yêu thích:', err);
+        console.error('Error fetching favorites list:', err);
       }
     };
     fetchFavorites();
@@ -694,9 +793,9 @@ export default function DashboardBrowseBooksPage() {
     try {
       const isFav = await toggleFavorite(bookId);
       if (isFav) {
-        toast.success('Đã thêm vào danh sách yêu thích!');
+        toast.success('Added to favorites!');
       } else {
-        toast.success('Đã xóa khỏi danh sách yêu thích.');
+        toast.success('Removed from favorites.');
       }
       setFavoriteBookIds((prev) => {
         const next = new Set(prev);
@@ -708,7 +807,7 @@ export default function DashboardBrowseBooksPage() {
         return next;
       });
     } catch (err) {
-      toast.error('Không thể cập nhật danh sách yêu thích.');
+      toast.error('Could not update favorites list.');
     }
   };
 
@@ -719,12 +818,17 @@ export default function DashboardBrowseBooksPage() {
         const response = await getMyLoans(undefined, 0, 100);
         const activeLoans = response.content.filter(loan =>
           loan.status === 'PENDING_PAYMENT' ||
+          loan.status === 'PENDING_PICKUP' ||
           loan.status === 'CHECKED_OUT' ||
           loan.status === 'OVERDUE'
         );
-        setBorrowingBookIds(new Set(activeLoans.map(loan => loan.bookId)));
+        const map: Record<number, BookLoanResponse> = {};
+        activeLoans.forEach((loan) => {
+          map[loan.bookId] = loan;
+        });
+        setActiveLoansMap(map);
       } catch (err) {
-        console.error('Lỗi khi lấy danh sách sách đang mượn:', err);
+        console.error('Error fetching active loans list:', err);
       }
     };
     fetchActiveLoans();
@@ -794,7 +898,7 @@ export default function DashboardBrowseBooksPage() {
         setTotalPages(data.totalPages);
         setTotalElements(data.totalElements);
       } catch (err: any) {
-        setError(err.message || 'Không thể tải danh sách sách.');
+        setError(err.message || 'Could not load books list.');
       } finally {
         setIsLoading(false);
       }
@@ -806,7 +910,7 @@ export default function DashboardBrowseBooksPage() {
   // Sidebar panel (shared between desktop and mobile drawer)
   const FilterPanel = () => {
     const displayGenres = [
-      { id: null, name: 'Tất cả thể loại' },
+      { id: null, name: 'All Genres' },
       ...genresList,
     ];
 
@@ -1037,7 +1141,7 @@ export default function DashboardBrowseBooksPage() {
                   <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
                     <XCircle size={28} className="text-red-500" />
                   </div>
-                  <p className="font-semibold text-lg">Đã xảy ra lỗi</p>
+                  <p className="font-semibold text-lg">An error occurred</p>
                   <p className="text-sm mt-1">{error}</p>
                 </div>
               ) : books.length > 0 ? (
@@ -1048,7 +1152,7 @@ export default function DashboardBrowseBooksPage() {
                         key={book.id}
                         book={book}
                         onSelect={() => setSelected(book)}
-                        isBorrowing={borrowingBookIds.has(book.id)}
+                        activeLoan={activeLoansMap[book.id]}
                         isFavorite={favoriteBookIds.has(book.id)}
                         onToggleFavorite={() => handleToggleFavorite(book.id)}
                       />
@@ -1087,13 +1191,16 @@ export default function DashboardBrowseBooksPage() {
       {/* Book detail dialog */}
       <BookDetailDialog
         book={selected}
-        onClose={() => setSelected(null)}
+        onClose={(needRefresh) => {
+          setSelected(null);
+          if (needRefresh) setRefreshTrigger((prev) => prev + 1);
+        }}
         onBorrowPaid={(loanId, sePayCheckout, bookTitle) => {
           setCheckoutLoanId(loanId);
           setCheckoutSePayData(sePayCheckout);
           setCheckoutBookTitle(bookTitle);
         }}
-        isBorrowing={selected ? borrowingBookIds.has(selected.id) : false}
+        activeLoan={selected ? activeLoansMap[selected.id] : undefined}
         isFavorite={selected ? favoriteBookIds.has(selected.id) : false}
         onToggleFavorite={() => selected && handleToggleFavorite(selected.id)}
         isVip={isVip}
@@ -1107,13 +1214,13 @@ export default function DashboardBrowseBooksPage() {
           sePayCheckout={checkoutSePayData}
           onClose={async (reason) => {
             if (reason === 'expired') {
-              toast.error('Hết thời gian giữ chỗ, đơn mượn sách đã bị tự động hủy!');
+              toast.error('Reservation time expired, the loan request was automatically canceled!');
             } else if (reason === 'closed' && checkoutLoanId !== null) {
               try {
                 await cancelPendingLoan(checkoutLoanId);
-                toast('Đã hủy yêu cầu mượn sách.', { icon: 'ℹ️' });
+                toast('Book loan request canceled.', { icon: 'ℹ️' });
               } catch (err) {
-                console.error("Lỗi khi hủy đơn mượn:", err);
+                console.error("Error canceling loan request:", err);
               }
             }
             setCheckoutLoanId(null);
@@ -1122,7 +1229,7 @@ export default function DashboardBrowseBooksPage() {
             setRefreshTrigger((prev) => prev + 1);
           }}
           onSuccess={() => {
-            toast.success('🎉 Thanh toán thành công! Ra quầy thư viện để nhận sách nhé.', { duration: 5000 });
+            toast.success('🎉 Payment successful! Please pick up your book at the library counter.', { duration: 5000 });
             setCheckoutLoanId(null);
             setCheckoutSePayData(null);
             setCheckoutBookTitle('');

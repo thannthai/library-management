@@ -36,14 +36,14 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  PENDING_PICKUP: { label: 'Chờ nhận', className: 'bg-blue-100 text-blue-700' },
-  CHECKED_OUT:    { label: 'Đang mượn', className: 'bg-green-100 text-green-700' },
-  OVERDUE:        { label: 'Quá hạn!', className: 'bg-rose-100 text-rose-700' },
+  PENDING_PICKUP: { label: 'Pending Pickup', className: 'bg-blue-100 text-blue-700' },
+  CHECKED_OUT:    { label: 'Checked Out', className: 'bg-green-100 text-green-700' },
+  OVERDUE:        { label: 'Overdue!', className: 'bg-rose-100 text-rose-700' },
 };
 
 function formatDate(d: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function isOverdueNow(dueDate: string | null): boolean {
@@ -90,34 +90,34 @@ function ReturnConfirmModal({
               : <CheckCircle size={24} weight="fill" className="text-green-500" />}
           </div>
           <div>
-            <h3 className="font-bold text-slate-800 text-base">Xác nhận nhận trả sách</h3>
+            <h3 className="font-bold text-slate-800 text-base">Confirm Book Return</h3>
             <p className="text-xs text-slate-400 mt-0.5">#{loan.id}</p>
           </div>
         </div>
 
         <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-1.5">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Sách:</span>
+            <span className="text-slate-500">Book:</span>
             <span className="font-semibold text-slate-800 text-right max-w-[60%] truncate">{loan.bookTitle}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Người mượn:</span>
+            <span className="text-slate-500">Borrower:</span>
             <span className="font-medium text-slate-700">{loan.userEmail}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Hạn trả:</span>
+            <span className="text-slate-500">Due Date:</span>
             <span className={`font-medium ${overdue ? 'text-rose-600' : 'text-slate-700'}`}>
               {formatDate(loan.dueDate)}
             </span>
           </div>
           {overdue && (
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Tiền phạt dự kiến:</span>
+              <span className="text-slate-500">Estimated Fine:</span>
               <span className="font-bold text-rose-600">
                 {/* Tính thô: số ngày x 5000 */}
                 {(() => {
                   const days = Math.ceil((Date.now() - new Date(loan.dueDate!).getTime()) / 86_400_000);
-                  return (days * 5000).toLocaleString('vi-VN') + ' VND';
+                  return (days * 5000).toLocaleString('en-US') + ' VND';
                 })()}
               </span>
             </div>
@@ -128,8 +128,8 @@ function ReturnConfirmModal({
           <div className="flex items-start gap-2 bg-rose-50 border border-rose-100 rounded-xl p-3 mb-4">
             <CurrencyCircleDollar size={16} weight="fill" className="text-rose-500 mt-0.5 shrink-0" />
             <p className="text-xs text-rose-700 leading-relaxed">
-              Đơn này quá hạn. Tiền phạt sẽ được tạo tự động sau khi xác nhận trả sách.
-              <br />Thu tiền mặt tại quầy theo số tiền hiển thị.
+              This loan is overdue. The late fine will be auto-generated upon return confirmation.
+              <br />Collect cash payment at the counter accordingly.
             </p>
           </div>
         )}
@@ -137,13 +137,13 @@ function ReturnConfirmModal({
         <div className="flex gap-3">
           <button type="button" onClick={onCancel} disabled={loading}
             className="flex-1 h-10 rounded-xl border-2 border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50">
-            Hủy
+            Cancel
           </button>
           <button type="button" onClick={onConfirm} disabled={loading}
             className={`flex-1 h-10 rounded-xl text-white text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
               overdue ? 'bg-rose-500 hover:bg-rose-600' : 'bg-green-500 hover:bg-green-600'
             }`}>
-            {loading ? 'Đang xử lý…' : 'Xác nhận trả sách'}
+            {loading ? 'Processing...' : 'Confirm Return'}
           </button>
         </div>
       </motion.div>
@@ -203,12 +203,12 @@ function LoanCard({
           </span>
           {loan.dueDate && (
             <span className={`flex items-center gap-1 ${isOverdue ? 'text-rose-500 font-semibold' : ''}`}>
-              <Clock size={12} /> {isOverdue ? 'Quá hạn: ' : 'Hạn: '}{formatDate(loan.dueDate)}
+              <Clock size={12} /> {isOverdue ? 'Overdue: ' : 'Due: '}{formatDate(loan.dueDate)}
             </span>
           )}
         </div>
         <p className="text-xs text-slate-400 mt-1">
-          Tạo: {formatDate(loan.createdAt)} · {loan.type === 'SHORT_TERM' ? '3 ngày' : '14 ngày'}
+          Created: {formatDate(loan.createdAt)} · {loan.type === 'SHORT_TERM' ? '3 days' : '14 days'}
         </p>
       </div>
 
@@ -219,7 +219,7 @@ function LoanCard({
             onClick={() => onPickup(loan)}
             className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap">
             <CheckCircle size={14} weight="fill" />
-            Giao sách
+            Fulfill
           </button>
         )}
         {(loan.status === 'CHECKED_OUT' || loan.status === 'OVERDUE') && onReturn && (
@@ -229,7 +229,7 @@ function LoanCard({
               isOverdue ? 'bg-rose-500 hover:bg-rose-600' : 'bg-green-500 hover:bg-green-600'
             }`}>
             <ArrowCounterClockwise size={14} weight="fill" />
-            Nhận trả
+            Return
           </button>
         )}
       </div>
@@ -282,7 +282,7 @@ export default function AdminFulfillmentPage() {
       setPickupLoans(pendingRes.content);
       setActiveLoans([...checkedRes.content, ...overdueRes.content]);
     } catch {
-      toast.error('Không thể tải danh sách đơn mượn');
+      toast.error('Could not load loans list');
     } finally {
       setLoading(false);
     }
@@ -295,10 +295,10 @@ export default function AdminFulfillmentPage() {
     setActionLoading(loan.id);
     try {
       await pickupLoan(loan.id);
-      toast.success(`✅ Đã xác nhận giao sách cho đơn #${loan.id}`);
+      toast.success(`Confirmed delivery for loan #${loan.id}`);
       await load();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi xác nhận giao sách');
+      toast.error(err instanceof Error ? err.message : 'Failed to confirm book pickup');
     } finally {
       setActionLoading(null);
     }
@@ -312,16 +312,16 @@ export default function AdminFulfillmentPage() {
       const result = await returnLoan(returnTarget.id);
       if (result.hasFinePending) {
         toast.success(
-          `📚 Đã nhận trả sách #${returnTarget.id}. Phạt quá hạn: ${result.fineAmount.toLocaleString('vi-VN')} VND`,
+          `Book returned for loan #${returnTarget.id}. Late Fine: ${result.fineAmount.toLocaleString('en-US')} VND`,
           { duration: 6000 }
         );
       } else {
-        toast.success(`✅ Đã nhận trả sách thành công — đơn #${returnTarget.id}`);
+        toast.success(`Returned successfully — loan #${returnTarget.id}`);
       }
       setReturnTarget(null);
       await load();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi nhận trả sách');
+      toast.error(err instanceof Error ? err.message : 'Failed to return book');
     } finally {
       setActionLoading(null);
     }
@@ -330,17 +330,17 @@ export default function AdminFulfillmentPage() {
   const visibleLoans = activeTab === 'pickup' ? pickupLoans : activeLoans;
 
   return (
-    <AdminLayout pageTitle="Quầy Giao Nhận">
+    <AdminLayout pageTitle="Fulfillment Counter">
       <div className="p-6 max-w-4xl mx-auto space-y-6">
 
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <ClipboardText size={26} weight="fill" className="text-blue-500" />
-            Quầy Giao Nhận Sách
+            Fulfillment Counter
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Xác nhận giao sách và nhận trả sách tại quầy thư viện
+            Fulfill reservations and return books at the counter
           </p>
         </div>
 
@@ -348,27 +348,17 @@ export default function AdminFulfillmentPage() {
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-2xl p-1.5 w-fit">
           <TabBtn
             active={activeTab === 'pickup'}
-            label="Chờ giao sách"
+            label="Pending Fulfill"
             count={pickupLoans.length}
             onClick={() => setActiveTab('pickup')}
           />
           <TabBtn
             active={activeTab === 'checkedout'}
-            label="Đang mượn / Quá hạn"
+            label="Checked Out / Overdue"
             count={activeLoans.length}
             onClick={() => setActiveTab('checkedout')}
           />
         </div>
-
-        {/* 24h warning for PENDING_PICKUP tab */}
-        {activeTab === 'pickup' && pickupLoans.length > 0 && (
-          <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3">
-            <Warning size={16} weight="fill" className="text-amber-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              Các đơn <strong>PENDING_PICKUP</strong> sẽ tự động bị hủy và sách được nhả về kho nếu không có ai đến nhận sau <strong>24 giờ</strong>.
-            </p>
-          </div>
-        )}
 
         {/* Loan list */}
         {loading ? (
@@ -385,7 +375,7 @@ export default function AdminFulfillmentPage() {
           >
             <CheckCircle size={48} weight="light" className="mx-auto mb-3 opacity-40" />
             <p className="text-sm font-medium">
-              {activeTab === 'pickup' ? 'Không có đơn nào chờ giao sách' : 'Không có đơn nào đang hoạt động'}
+              {activeTab === 'pickup' ? 'No pending pickups' : 'No active loans'}
             </p>
           </motion.div>
         ) : (

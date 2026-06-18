@@ -20,7 +20,7 @@ import { toast } from 'react-hot-toast';
 
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { getMyLoans, renewBookLoan, getLoanPaymentUrl } from '../../api/loansApi';
+import { getMyLoans, renewBookLoan, getLoanPaymentUrl, cancelPendingLoan } from '../../api/loansApi';
 import type { BookLoanResponse } from '../../types/loans.types';
 import type { SePayCheckout } from '../../types/subscription.types';
 import CheckoutModal from '../../components/CheckoutModal';
@@ -245,7 +245,7 @@ export default function MyLoansPage() {
       const filteredLoans = response.content.filter((loan) => loan.status !== 'CANCELED');
       setLoans(filteredLoans);
     } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách sách mượn.');
+      setError(err.message || 'Failed to load borrowed books.');
     } finally {
       setIsLoading(false);
     }
@@ -261,10 +261,10 @@ export default function MyLoansPage() {
     setActionLoanId(loanId);
     try {
       await renewBookLoan(loanId);
-      toast.success('Gia hạn sách thành công!');
+      toast.success('Book loan renewed successfully!');
       await fetchLoans();
     } catch (err: any) {
-      toast.error(err.message || 'Không thể gia hạn sách.');
+      toast.error(err.message || 'Failed to renew book loan.');
     } finally {
       setActionLoanId(null);
     }
@@ -284,7 +284,22 @@ export default function MyLoansPage() {
         createdAt: loan.createdAt,
       });
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Không thể lấy thông tin thanh toán. Vui lòng thử lại.');
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to load payment details. Please try again.');
+    } finally {
+      setActionLoanId(null);
+    }
+  };
+
+  const handleCancelLoan = async (loanId: number) => {
+    if (actionLoanId !== null) return;
+    if (!window.confirm("Are you sure you want to cancel this book loan request?")) return;
+    setActionLoanId(loanId);
+    try {
+      await cancelPendingLoan(loanId);
+      toast.success("Book loan request canceled successfully.");
+      await fetchLoans();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to cancel book loan request.");
     } finally {
       setActionLoanId(null);
     }
@@ -301,7 +316,7 @@ export default function MyLoansPage() {
     // Fallback to normal status-based rendering
     switch (loan.status) {
       case 'PENDING_PICKUP':
-        return { label: 'Chờ nhận sách', cls: 'bg-indigo-500 text-white border-indigo-500' };
+        return { label: 'Pending Pickup', cls: 'bg-indigo-500 text-white border-indigo-500' };
       case 'CHECKED_OUT':
         return { label: 'Checked Out', cls: 'bg-blue-500 text-white border-blue-500' };
       case 'RETURNED':
@@ -338,12 +353,12 @@ export default function MyLoansPage() {
           onClose={(reason) => {
             setCheckoutLoan(null);
             if (reason === 'expired') {
-              toast.error('Hết thời gian giữ chỗ, đơn mượn sách đã bị tự động hủy!');
-              fetchLoans();
+              toast.error('Reservation time expired, the loan request was automatically canceled!');
             }
+            fetchLoans();
           }}
           onSuccess={() => {
-            toast.success('🎉 Thanh toán thành công! Ra quầy thư viện để nhận sách nhé.', { duration: 5000 });
+            toast.success('🎉 Payment successful! Please visit the counter to pick up your book.', { duration: 5000 });
             setCheckoutLoan(null);
             fetchLoans();
           }}
@@ -391,7 +406,7 @@ export default function MyLoansPage() {
                     alt={selectedLoan.bookTitle}
                     className="w-full h-full object-cover"
                     title={selectedLoan.bookTitle}
-                    author={selectedLoan.authorName || 'Chưa rõ'}
+                    author={selectedLoan.authorName || 'Unknown'}
                   />
                 </div>
                 <div className="flex-1 min-w-0 pt-1">
@@ -403,9 +418,9 @@ export default function MyLoansPage() {
                   </h2>
                   <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                     <UserIcon size={12} />
-                    {selectedLoan.authorName || 'Chưa rõ tác giả'}
+                    {selectedLoan.authorName || 'Unknown Author'}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-1">ISBN: {selectedLoan.isbn || 'Chưa có'}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">ISBN: {selectedLoan.isbn || 'None'}</p>
                 </div>
               </div>
 
@@ -427,7 +442,7 @@ export default function MyLoansPage() {
                   </div>
                   <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl">
                     <p className="text-slate-400 font-medium">Overdue Days</p>
-                    <p className="font-bold text-slate-700 mt-0.5">{selectedLoan.overdueDays} ngày</p>
+                    <p className="font-bold text-slate-700 mt-0.5">{selectedLoan.overdueDays} days</p>
                   </div>
                 </div>
 
@@ -446,7 +461,7 @@ export default function MyLoansPage() {
                     onClick={() => setSelectedLoan(null)}
                     className="px-4 h-9 rounded-xl border border-slate-200 text-slate-500 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    Đóng
+                    Close
                   </button>
                   {selectedLoan.paymentStatus === 'PAID' && selectedLoan.status === 'CHECKED_OUT' && selectedLoan.renewalCount < selectedLoan.maxRenewals && (
                     <button
@@ -508,17 +523,17 @@ export default function MyLoansPage() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <CircleNotch size={32} className="animate-spin text-indigo-600 mb-3" />
-            <p className="text-xs text-slate-400">Đang tải danh sách sách mượn...</p>
+            <p className="text-xs text-slate-400">Loading borrowed books...</p>
           </div>
         ) : error ? (
           <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-center max-w-md mx-auto shadow-sm">
-            <p className="text-sm text-rose-600 font-semibold mb-2">Đã xảy ra lỗi</p>
+            <p className="text-sm text-rose-600 font-semibold mb-2">An error occurred</p>
             <p className="text-xs text-rose-500 mb-4">{error}</p>
             <button
               onClick={fetchLoans}
               className="px-4 py-2 text-xs font-semibold text-indigo-600 bg-white border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-all cursor-pointer"
             >
-              Thử lại
+              Try again
             </button>
           </div>
         ) : loans.length > 0 ? (
@@ -565,7 +580,7 @@ export default function MyLoansPage() {
                       alt={loan.bookTitle}
                       className="w-full h-full object-cover"
                       title={loan.bookTitle}
-                      author={loan.authorName || 'Chưa rõ'}
+                      author={loan.authorName || 'Unknown'}
                     />
                   </div>
 
@@ -577,7 +592,7 @@ export default function MyLoansPage() {
                       </h3>
                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                         <UserIcon size={12} className="shrink-0" />
-                        {loan.authorName || 'Chưa rõ tác giả'}
+                        {loan.authorName || 'Unknown Author'}
                       </p>
                       <p className="text-[10px] text-slate-400 mt-0.5">ISBN: {loan.isbn}</p>
                     </div>
@@ -593,7 +608,7 @@ export default function MyLoansPage() {
                       <div className="mt-3 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl max-w-lg">
                         <div className="flex items-center gap-1.5 mb-1">
                           <CurrencyCircleDollar size={11} className="text-amber-600 shrink-0" />
-                          <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider leading-none">Mã thanh toán (SePay Simulation)</p>
+                          <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider leading-none">Payment Code (SePay Simulation)</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <code className="text-[10px] font-mono font-bold text-amber-800 select-all flex-1 break-all">
@@ -610,7 +625,7 @@ export default function MyLoansPage() {
                             <CopySimple size={11} weight="bold" />
                           </button>
                         </div>
-                        <p className="text-[8px] text-amber-500 mt-1 leading-snug">Copy vào ô "Nội dung chuyển khoản" khi mô phỏng trên SePay dashboard</p>
+                        <p className="text-[8px] text-amber-500 mt-1 leading-snug">Copy into the "Transaction Description" field on SePay dashboard</p>
                       </div>
                     )}
                   </div>
@@ -638,8 +653,8 @@ export default function MyLoansPage() {
                           <p className={`text-[9px] uppercase tracking-wider leading-none ${dueLabelClass}`}>Due Date</p>
                           <p className={`text-xs mt-1 leading-none ${dueColorClass}`}>
                             {formatDate(loan.dueDate)}
-                            {overdue && <span className="text-[9px] ml-1 font-bold">(Quá hạn)</span>}
-                            {nearDue && <span className="text-[9px] ml-1 font-bold">(Sắp hết hạn)</span>}
+                            {overdue && <span className="text-[9px] ml-1 font-bold">(Overdue)</span>}
+                            {nearDue && <span className="text-[9px] ml-1 font-bold">(Near Due)</span>}
                           </p>
                         </div>
                       </div>
@@ -670,21 +685,35 @@ export default function MyLoansPage() {
                       </button>
 
                       {loan.paymentStatus === 'PENDING_PAYMENT' ? (
-                        <button
-                          type="button"
-                          onClick={() => handlePayPending(loan)}
-                          disabled={actionLoanId !== null}
-                          className="flex-1 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-sm shadow-amber-100"
-                        >
-                          {actionLoanId === loan.id ? (
-                            <CircleNotch size={12} className="animate-spin" />
-                          ) : (
-                            <>
-                              Pay Now
-                              <ArrowRight size={10} weight="bold" />
-                            </>
-                          )}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelLoan(loan.id)}
+                            disabled={actionLoanId !== null}
+                            className="flex-1 h-8 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 text-[10px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            {actionLoanId === loan.id ? (
+                              <CircleNotch size={12} className="animate-spin" />
+                            ) : (
+                              'Cancel'
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePayPending(loan)}
+                            disabled={actionLoanId !== null}
+                            className="flex-1 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-sm shadow-amber-100"
+                          >
+                            {actionLoanId === loan.id ? (
+                              <CircleNotch size={12} className="animate-spin" />
+                            ) : (
+                              <>
+                                Pay Now
+                                <ArrowRight size={10} weight="bold" />
+                              </>
+                            )}
+                          </button>
+                        </>
                       ) : (loan.paymentStatus === 'PAID' && loan.status === 'CHECKED_OUT') ? (
                         <button
                           type="button"
@@ -729,7 +758,7 @@ export default function MyLoansPage() {
             </div>
             <p className="font-bold text-slate-800 text-sm">No borrowed books found</p>
             <p className="text-xs text-slate-400 mt-1 max-w-xs">
-              Thư mục trống. Bạn chưa có lượt mượn sách nào tương ứng với bộ lọc này.
+              Folder is empty. You do not have any book loans matching this filter.
             </p>
           </div>
         )}

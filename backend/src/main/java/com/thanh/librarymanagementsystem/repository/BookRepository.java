@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
@@ -16,6 +18,24 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Boolean existsByIsbn(String isbn);
 
     Boolean existsByTitle(String title);
+
+    List<Book> findByActiveTrue(Pageable pageable);
+
+    @Query("SELECT b, COUNT(bl.id) as borrowNumber FROM Book b " +
+           "JOIN BookCopy bc ON b.id = bc.book.id " +
+           "JOIN BookLoan bl ON bc.id = bl.bookCopy.id " +
+           "WHERE bl.createdAt >= :oneWeekAgo AND b.active = true " +
+           "GROUP BY b " +
+           "ORDER BY borrowNumber DESC")
+    List<Object[]> findTopBorrowedBooksLastWeek(@Param("oneWeekAgo") LocalDateTime oneWeekAgo, Pageable pageable);
+
+    @Query("SELECT b, COUNT(bl.id) as borrowNumber FROM Book b " +
+           "JOIN BookCopy bc ON b.id = bc.book.id " +
+           "JOIN BookLoan bl ON bc.id = bl.bookCopy.id " +
+           "WHERE b.active = true " +
+           "GROUP BY b " +
+           "ORDER BY borrowNumber DESC")
+    List<Object[]> findTopBorrowedBooksOverall(Pageable pageable);
 
     @Query("SELECT DISTINCT b FROM Book b " +
             "LEFT JOIN b.genres g " +

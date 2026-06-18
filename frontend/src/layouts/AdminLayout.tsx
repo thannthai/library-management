@@ -29,11 +29,11 @@ import { useAuth } from '../context/AuthContext';
 // ─── Nav config ───────────────────────────────────────────────────────────────
 const ADMIN_NAV_ITEMS = [
   { label: 'Dashboard',      href: '/admin/dashboard',     icon: House },
-  { label: 'Quầy Giao Nhận', href: '/admin/fulfillment',   icon: ClipboardText },
-  { label: 'Sách',           href: '/admin/books',         icon: BookOpen },
-  { label: 'Tất Cả Đơn',     href: '/admin/loans',         icon: Books },
-  { label: 'Thu Phạt',       href: '/admin/fines',         icon: CurrencyCircleDollar },
-  { label: 'Người Dùng',     href: '/admin/users',         icon: Users },
+  { label: 'Fulfillment',    href: '/admin/fulfillment',   icon: ClipboardText },
+  { label: 'Books',          href: '/admin/books',         icon: BookOpen },
+  { label: 'All Loans',      href: '/admin/loans',         icon: Books },
+  { label: 'Fines',          href: '/admin/fines',         icon: CurrencyCircleDollar },
+  { label: 'Users',          href: '/admin/users',         icon: Users },
 ];
 
 // ─── Active check ─────────────────────────────────────────────────────────────
@@ -59,18 +59,18 @@ function LogoutDialog({ open, onCancel, onConfirm }: {
               <Warning size={28} weight="fill" className="text-rose-500" />
             </div>
           </div>
-          <h2 className="text-center text-lg font-bold text-slate-800 mb-2">Xác nhận đăng xuất</h2>
+          <h2 className="text-center text-lg font-bold text-slate-800 mb-2">Confirm Logout</h2>
           <p className="text-center text-sm text-slate-500 leading-relaxed">
-            Bạn có chắc muốn thoát khỏi Admin Portal?
+            Are you sure you want to log out of the Admin Portal?
           </p>
           <div className="flex gap-3 mt-6">
             <button type="button" onClick={onCancel}
               className="flex-1 h-10 rounded-xl border-2 border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">
-              Hủy
+              Cancel
             </button>
             <button type="button" onClick={onConfirm}
               className="flex-1 h-10 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition-colors cursor-pointer">
-              Đăng xuất
+              Logout
             </button>
           </div>
         </div>
@@ -111,7 +111,7 @@ function AdminSidebar({ onNavClick, onLogout }: { onNavClick?: () => void; onLog
       <div className="mx-4 mb-3">
         <Link to="/dashboard" onClick={onNavClick}
           className="w-full h-9 rounded-xl border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer">
-          Xem Giao Diện User
+          Switch to User View
         </Link>
       </div>
 
@@ -145,7 +145,7 @@ function AdminSidebar({ onNavClick, onLogout }: { onNavClick?: () => void; onLog
         <button type="button" onClick={onLogout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition-all duration-150 w-full cursor-pointer">
           <SignOut size={18} className="shrink-0" />
-          <span>Đăng xuất</span>
+          <span>Logout</span>
         </button>
       </div>
     </div>

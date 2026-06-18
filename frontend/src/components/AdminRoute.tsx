@@ -29,7 +29,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
           <BookOpen size={28} weight="bold" color="white" />
         </div>
         <p className="mt-5 text-sm font-medium text-slate-400 tracking-wide">
-          Đang xác thực quyền Admin…
+          Verifying Admin access...
         </p>
       </div>
     );
@@ -48,15 +48,15 @@ export default function AdminRoute({ children }: AdminRouteProps) {
         <div className="w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center shadow mb-4">
           <Lock size={32} weight="fill" className="text-rose-500" />
         </div>
-        <h1 className="text-xl font-bold text-slate-800 mb-2">Truy cập bị từ chối</h1>
+        <h1 className="text-xl font-bold text-slate-800 mb-2">Access Denied</h1>
         <p className="text-sm text-slate-500 mb-6 text-center max-w-xs">
-          Trang này chỉ dành cho Admin. Tài khoản của bạn không có quyền truy cập.
+          This section is restricted to administrators. Your account does not have permission to access this page.
         </p>
         <a
           href="/dashboard"
           className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
         >
-          Về Dashboard
+          Back to Dashboard
         </a>
       </div>
     );

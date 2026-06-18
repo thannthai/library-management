@@ -39,4 +39,5 @@ public class BookResponse {
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long borrowNumber;
 }

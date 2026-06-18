@@ -45,7 +45,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.password) {
-      setErrorMsg('Vui lòng điền đầy đủ email và mật khẩu.');
+      setErrorMsg('Please enter both email and password.');
       return;
     }
 
@@ -60,7 +60,7 @@ export default function LoginPage() {
       const isAdmin = freshUser.roles?.includes('ROLE_ADMIN');
       navigate(isAdmin ? '/admin/dashboard' : '/dashboard');
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Đăng nhập thất bại. Vui lòng thử lại.');
+      setErrorMsg(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -106,20 +106,20 @@ export default function LoginPage() {
               transition={{ delay: 0.3, duration: 0.6 }}
             >
               <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
-                Chào mừng trở lại,<br />
-                <span className="text-indigo-200">người yêu sách.</span>
+                Welcome back,<br />
+                <span className="text-indigo-200">book lover.</span>
               </h1>
               <p className="text-indigo-200 text-base leading-relaxed">
-                Đăng nhập để tiếp tục hành trình khám phá tri thức cùng hàng ngàn đầu sách tại BookNest.
+                Sign in to continue your journey of discovering knowledge with thousands of books at BookNest.
               </p>
             </motion.div>
 
             {/* Stats row */}
             <div className="flex gap-8 mt-10">
               {[
-                { label: 'Đầu sách', value: '12,000+' },
-                { label: 'Thành viên', value: '3,500+' },
-                { label: 'Lượt mượn', value: '58,000+' },
+                { label: 'Books', value: '12,000+' },
+                { label: 'Members', value: '3,500+' },
+                { label: 'Borrows', value: '58,000+' },
               ].map((stat) => (
                 <div key={stat.label}>
                   <p className="text-white text-2xl font-bold">{stat.value}</p>
@@ -152,11 +152,11 @@ export default function LoginPage() {
 
           {/* Heading */}
           <div className="mb-8">
-            <h2 className="text-2xl font-extrabold text-slate-800">Đăng nhập</h2>
+            <h2 className="text-2xl font-extrabold text-slate-800">Sign In</h2>
             <p className="text-sm text-slate-500 mt-1.5">
-              Chưa có tài khoản?{' '}
+              Don't have an account?{' '}
               <Link to="/register" className="text-indigo-600 font-semibold hover:underline">
-                Tạo tài khoản mới
+                Create a new account
               </Link>
             </p>
           </div>
@@ -191,7 +191,7 @@ export default function LoginPage() {
 
             <TextField
               id="login-password"
-              label="Mật khẩu"
+              label="Password"
               type={showPass ? 'text' : 'password'}
               autoComplete="current-password"
               value={form.password}
@@ -199,7 +199,7 @@ export default function LoginPage() {
               disabled={submitting}
               fullWidth
               slotProps={{
-                htmlInput: { 'aria-label': 'Mật khẩu' },
+                htmlInput: { 'aria-label': 'Password' },
                 input: {
                   endAdornment: (
                     <InputAdornment position="end">
@@ -207,7 +207,7 @@ export default function LoginPage() {
                         onClick={() => setShowPass((v) => !v)}
                         edge="end"
                         size="small"
-                        aria-label={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        aria-label={showPass ? 'Hide password' : 'Show password'}
                       >
                         {showPass ? <EyeSlash size={18} /> : <Eye size={18} />}
                       </IconButton>
@@ -224,7 +224,7 @@ export default function LoginPage() {
                 to="/forgot-password"
                 className="text-xs text-indigo-600 hover:underline cursor-pointer"
               >
-                Quên mật khẩu?
+                Forgot password?
               </Link>
             </div>
 
@@ -245,7 +245,7 @@ export default function LoginPage() {
                 <CircularProgress size={20} sx={{ color: 'white' }} />
               ) : (
                 <>
-                  Đăng nhập
+                  Log In
                   <ArrowRight size={17} weight="bold" />
                 </>
               )}
@@ -254,7 +254,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p className="mt-10 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} BookNest. Mọi quyền được bảo lưu.
+            © {new Date().getFullYear()} BookNest. All rights reserved.
           </p>
         </div>
       </motion.main>

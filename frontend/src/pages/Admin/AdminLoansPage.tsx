@@ -20,27 +20,27 @@ import { getAdminLoans, type AdminLoanItem, type LoanStatus, type PageResponse }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS: { value: LoanStatus | 'ALL'; label: string; color: string }[] = [
-  { value: 'ALL',             label: 'Tất cả',          color: 'text-slate-600' },
-  { value: 'PENDING_PAYMENT', label: 'Chờ thanh toán',  color: 'text-amber-600' },
-  { value: 'PENDING_PICKUP',  label: 'Chờ nhận sách',   color: 'text-blue-600' },
-  { value: 'CHECKED_OUT',     label: 'Đang mượn',       color: 'text-green-600' },
-  { value: 'OVERDUE',         label: 'Quá hạn',         color: 'text-rose-600' },
-  { value: 'RETURNED',        label: 'Đã trả',          color: 'text-slate-400' },
-  { value: 'CANCELED',        label: 'Đã hủy',          color: 'text-slate-400' },
+  { value: 'ALL',             label: 'All',             color: 'text-slate-600' },
+  { value: 'PENDING_PAYMENT', label: 'Pending Payment', color: 'text-amber-600' },
+  { value: 'PENDING_PICKUP',  label: 'Pending Pickup',  color: 'text-blue-600' },
+  { value: 'CHECKED_OUT',     label: 'Checked Out',     color: 'text-green-600' },
+  { value: 'OVERDUE',         label: 'Overdue',         color: 'text-rose-600' },
+  { value: 'RETURNED',        label: 'Returned',        color: 'text-slate-400' },
+  { value: 'CANCELED',        label: 'Canceled',        color: 'text-slate-400' },
 ];
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  PENDING_PAYMENT: { label: 'Chờ thanh toán',  className: 'bg-amber-50  text-amber-700  border-amber-200' },
-  PENDING_PICKUP:  { label: 'Chờ nhận sách',   className: 'bg-blue-50   text-blue-700   border-blue-200' },
-  CHECKED_OUT:     { label: 'Đang mượn',        className: 'bg-green-50  text-green-700  border-green-200' },
-  OVERDUE:         { label: 'Quá hạn',          className: 'bg-rose-50   text-rose-700   border-rose-200' },
-  RETURNED:        { label: 'Đã trả',           className: 'bg-slate-50  text-slate-500  border-slate-200' },
-  CANCELED:        { label: 'Đã hủy',           className: 'bg-slate-50  text-slate-400  border-slate-200' },
+  PENDING_PAYMENT: { label: 'Pending Payment', className: 'bg-amber-50  text-amber-700  border-amber-200' },
+  PENDING_PICKUP:  { label: 'Pending Pickup',  className: 'bg-blue-50   text-blue-700   border-blue-200' },
+  CHECKED_OUT:     { label: 'Checked Out',     className: 'bg-green-50  text-green-700  border-green-200' },
+  OVERDUE:         { label: 'Overdue',         className: 'bg-rose-50   text-rose-700   border-rose-200' },
+  RETURNED:        { label: 'Returned',        className: 'bg-slate-50  text-slate-500  border-slate-200' },
+  CANCELED:        { label: 'Canceled',        className: 'bg-slate-50  text-slate-400  border-slate-200' },
 };
 
 function formatDate(d: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 // ─── Row ──────────────────────────────────────────────────────────────────────
@@ -119,17 +119,17 @@ export default function AdminLoansPage() {
   };
 
   return (
-    <AdminLayout pageTitle="Tất Cả Đơn Mượn">
+    <AdminLayout pageTitle="All Loans">
       <div className="p-6 space-y-5">
 
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Books size={26} weight="fill" className="text-indigo-500" />
-            Quản lý đơn mượn
+            Manage Loans
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Tổng cộng {response?.totalElements ?? '…'} đơn
+            Total {response?.totalElements ?? '…'} loan(s)
           </p>
         </div>
 
@@ -153,7 +153,7 @@ export default function AdminLoansPage() {
           <button type="button" onClick={load}
             className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer">
             <MagnifyingGlass size={13} />
-            Làm mới
+            Refresh
           </button>
         </div>
 
@@ -164,12 +164,12 @@ export default function AdminLoansPage() {
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
                   <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">ID</th>
-                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Sách</th>
-                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Người mượn</th>
-                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Trạng thái</th>
-                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Hạn trả</th>
-                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Tạo lúc</th>
-                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Thanh toán</th>
+                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Book</th>
+                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Borrower</th>
+                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Status</th>
+                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Due Date</th>
+                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Created At</th>
+                  <th className="py-3 px-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wide">Payment</th>
                 </tr>
               </thead>
               <tbody>
@@ -187,7 +187,7 @@ export default function AdminLoansPage() {
                     ? (
                       <tr>
                         <td colSpan={7} className="py-16 text-center text-slate-400 text-sm">
-                          Không có đơn mượn nào
+                          No loans found
                         </td>
                       </tr>
                     )
@@ -246,20 +246,20 @@ export default function AdminLoansPage() {
           {response && response.totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
               <span className="text-xs text-slate-400">
-                Trang {response.page + 1} / {response.totalPages}
+                Page {response.page + 1} of {response.totalPages}
               </span>
               <div className="flex gap-2">
                 <button type="button"
                   onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={response.first}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-colors cursor-pointer">
-                  <ArrowLeft size={13} /> Trước
+                  <ArrowLeft size={13} /> Prev
                 </button>
                 <button type="button"
                   onClick={() => setPage(p => p + 1)}
                   disabled={response.last}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-colors cursor-pointer">
-                  Tiếp <ArrowRight size={13} />
+                  Next <ArrowRight size={13} />
                 </button>
               </div>
             </div>

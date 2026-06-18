@@ -22,7 +22,7 @@ export default function AdminUsersPage() {
       setUsers(usersRes.data.data || []);
       setSubscriptions(subsData || []);
     } catch (e) {
-      toast.error('Lỗi khi tải thông tin người dùng / gói dịch vụ');
+      toast.error('Error loading users / subscriptions data');
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <AdminLayout pageTitle="Người Dùng">
+    <AdminLayout pageTitle="User Management">
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         
         {/* Header Section */}
@@ -53,14 +53,14 @@ export default function AdminUsersPage() {
           <div>
             <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
               <Users size={26} weight="fill" className="text-emerald-500" />
-              Danh Sách Thành Viên
+              Members Directory
             </h1>
-            <p className="text-sm text-slate-400 mt-1">Quản lý tài khoản, thông tin liên lạc và quyền truy cập.</p>
+            <p className="text-sm text-slate-400 mt-1">Manage accounts, contact info, and system permissions.</p>
           </div>
           <button
             onClick={loadData}
             className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-xl cursor-pointer transition-colors"
-            title="Làm mới"
+            title="Refresh"
           >
             <ArrowClockwise size={16} />
           </button>
@@ -72,12 +72,12 @@ export default function AdminUsersPage() {
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-6 py-4">Thành viên</th>
-                  <th className="px-6 py-4">Số điện thoại</th>
-                  <th className="px-6 py-4">Đăng nhập</th>
-                  <th className="px-6 py-4 text-center">Gói đang dùng</th>
-                  <th className="px-6 py-4 text-center">Quyền</th>
-                  <th className="px-6 py-4">Gia nhập ngày</th>
+                  <th className="px-6 py-4">Member</th>
+                  <th className="px-6 py-4">Phone</th>
+                  <th className="px-6 py-4">Login Method</th>
+                  <th className="px-6 py-4 text-center">Active Plan</th>
+                  <th className="px-6 py-4 text-center">Role</th>
+                  <th className="px-6 py-4">Joined Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 font-medium">
@@ -86,19 +86,19 @@ export default function AdminUsersPage() {
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                       <div className="flex items-center justify-center gap-2">
                         <CircleNotch size={16} className="animate-spin text-indigo-500" />
-                        Đang tải danh sách người dùng...
+                        Loading members directory...
                       </div>
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">Không có dữ liệu người dùng.</td>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">No users found.</td>
                   </tr>
                 ) : (
                   users.map((user, i) => {
                     const activePlan = getActivePlan(user.id);
                     const joinedDate = user.createdAt 
-                      ? new Date(user.createdAt).toLocaleDateString('vi-VN') 
+                      ? new Date(user.createdAt).toLocaleDateString('en-US') 
                       : 'N/A';
 
                     return (
@@ -116,7 +116,7 @@ export default function AdminUsersPage() {
                               {(user.fullName?.[0] || user.email?.[0] || 'U').toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-extrabold text-slate-800 text-[13px]">{user.fullName || 'Chưa cập nhật'}</p>
+                              <p className="font-extrabold text-slate-800 text-[13px]">{user.fullName || 'Not updated'}</p>
                               <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[180px]">{user.email}</p>
                             </div>
                           </div>

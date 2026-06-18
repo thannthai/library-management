@@ -76,6 +76,11 @@ public class BookController {
         return ResponseEntity.ok(new ApiResponse<>("Books searched successfully", true, service.searchBooks(searchRequest)));
     }
 
+    @GetMapping("/featured")
+    public ResponseEntity<ApiResponse<List<BookResponse>>> getFeaturedBooks() {
+        return ResponseEntity.ok(new ApiResponse<>("Featured books retrieved successfully", true, service.getFeaturedBooks()));
+    }
+
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BookStatsResponse>> getBookStats() {

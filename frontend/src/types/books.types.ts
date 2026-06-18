@@ -36,6 +36,7 @@ export interface BookResponse {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+  borrowNumber?: number;
 }
 
 export interface PageResponse<T> {

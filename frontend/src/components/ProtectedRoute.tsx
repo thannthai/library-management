@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
           <BookOpen size={28} weight="bold" color="white" />
         </div>
         <p className="mt-5 text-sm font-medium text-slate-400 tracking-wide">
-          Đang tải dữ liệu...
+          Loading data...
         </p>
       </div>
     );

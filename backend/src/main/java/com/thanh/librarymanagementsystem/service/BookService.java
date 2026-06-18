@@ -18,4 +18,5 @@ public interface BookService {
     PageResponse<BookResponse> searchBooks(BookSearchRequest searchRequest);
     long getTotalActiveBooks();
     long getTotalAvailableBooks();
+    List<BookResponse> getFeaturedBooks();
 }

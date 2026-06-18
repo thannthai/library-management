@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -156,5 +158,48 @@ public class BookServiceImpl implements BookService {
     @Override
     public long getTotalAvailableBooks() {
         return bookRepository.countAvailableBooks();
+    }
+
+    @Override
+    public List<BookResponse> getFeaturedBooks() {
+        LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
+        Pageable topTen = PageRequest.of(0, 10);
+        List<Object[]> rawResults = bookRepository.findTopBorrowedBooksLastWeek(oneWeekAgo, topTen);
+        
+        List<Object[]> results = new ArrayList<>(rawResults);
+
+        // If we don't have enough, fetch overall top borrowed
+        if (results.size() < 10) {
+            List<Object[]> overall = bookRepository.findTopBorrowedBooksOverall(topTen);
+            for (Object[] row : overall) {
+                if (results.size() >= 10) break;
+                Book b = (Book) row[0];
+                boolean exists = results.stream().anyMatch(r -> ((Book) r[0]).getId().equals(b.getId()));
+                if (!exists) {
+                    results.add(row);
+                }
+            }
+        }
+
+        // If still less than 10, fetch any active books
+        if (results.size() < 10) {
+            List<Book> activeBooks = bookRepository.findByActiveTrue(PageRequest.of(0, 10));
+            for (Book b : activeBooks) {
+                if (results.size() >= 10) break;
+                boolean exists = results.stream().anyMatch(r -> ((Book) r[0]).getId().equals(b.getId()));
+                if (!exists) {
+                    results.add(new Object[]{b, 0L});
+                }
+            }
+        }
+
+        // Map to DTO and set borrowNumber
+        return results.stream().map(row -> {
+            Book b = (Book) row[0];
+            Long count = (Long) row[1];
+            BookResponse dto = bookMapper.toDTO(b);
+            dto.setBorrowNumber(count);
+            return dto;
+        }).toList();
     }
 }

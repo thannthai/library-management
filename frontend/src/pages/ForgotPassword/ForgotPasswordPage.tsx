@@ -43,12 +43,12 @@ export default function ForgotPasswordPage() {
 
     const trimmedEmail = form.email.trim();
     if (!trimmedEmail) {
-      setErrorMsg('Vui lòng nhập địa chỉ email.');
+      setErrorMsg('Please enter your email address.');
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
-      setErrorMsg('Địa chỉ email không hợp lệ.');
+      setErrorMsg('Invalid email address.');
       return;
     }
 
@@ -58,10 +58,10 @@ export default function ForgotPasswordPage() {
       const response = await forgotPasswordRequest({ email: trimmedEmail });
       setSuccessMsg(
         response.message ??
-        'Chúng tôi đã gửi liên kết đặt lại mật khẩu đến email của bạn. Vui lòng kiểm tra hộp thư (kể cả thư mục spam).',
+        'We have sent a password reset link to your email. Please check your inbox (including the spam folder).',
       );
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Đã xảy ra lỗi. Vui lòng thử lại.');
+      setErrorMsg(err instanceof Error ? err.message : 'An error occurred. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -110,11 +110,11 @@ export default function ForgotPasswordPage() {
                 <PaperPlaneRight size={28} weight="duotone" color="white" />
               </div>
               <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
-                Quên mật khẩu?<br />
-                <span className="text-indigo-200">Không sao cả.</span>
+                Forgot password?<br />
+                <span className="text-indigo-200">No worries.</span>
               </h1>
               <p className="text-indigo-200 text-base leading-relaxed">
-                Nhập địa chỉ email đã đăng ký. Chúng tôi sẽ gửi ngay liên kết an toàn để bạn đặt lại mật khẩu.
+                Enter your registered email address. We will send a secure link to reset your password.
               </p>
             </motion.div>
           </div>
@@ -146,14 +146,14 @@ export default function ForgotPasswordPage() {
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600 transition-colors mb-8"
           >
             <ArrowLeft size={15} weight="bold" />
-            Quay lại đăng nhập
+            Back to Login
           </Link>
 
           {/* Heading */}
           <div className="mb-7">
-            <h2 className="text-2xl font-extrabold text-slate-800">Khôi phục mật khẩu</h2>
+            <h2 className="text-2xl font-extrabold text-slate-800">Reset Password</h2>
             <p className="text-sm text-slate-500 mt-1.5">
-              Nhập email tài khoản và chúng tôi sẽ gửi liên kết đặt lại.
+              Enter your account email and we will send a reset link.
             </p>
           </div>
 
@@ -196,7 +196,7 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
               <TextField
                 id="forgot-email"
-                label="Địa chỉ email"
+                label="Email Address"
                 type="email"
                 autoComplete="email"
                 value={form.email}
@@ -222,9 +222,9 @@ export default function ForgotPasswordPage() {
                   <CircularProgress size={20} sx={{ color: 'white' }} />
                 ) : (
                   <>
-                    Gửi liên kết khôi phục
-                    <PaperPlaneRight size={17} weight="bold" />
-                  </>
+                  Send Reset Link
+                  <PaperPlaneRight size={17} weight="bold" />
+                </>
                 )}
               </button>
             </form>
@@ -232,7 +232,7 @@ export default function ForgotPasswordPage() {
 
           {/* Footer */}
           <p className="mt-10 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} BookNest. Mọi quyền được bảo lưu.
+            © {new Date().getFullYear()} BookNest. All rights reserved.
           </p>
         </div>
       </motion.main>

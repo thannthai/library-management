@@ -48,7 +48,7 @@ axiosClient.interceptors.response.use(
       error?.response?.data?.error ??
       error?.message;
 
-    return Promise.reject(new Error(serverMessage ?? 'Đã xảy ra lỗi không xác định.'));
+    return Promise.reject(new Error(serverMessage ?? 'An unknown error occurred.'));
   },
 );
 
@@ -66,7 +66,7 @@ interface ApiResponse<T> {
  */
 const mapToAuthUser = (userRes: any): AuthUser => {
   if (!userRes) {
-    throw new Error('Dữ liệu phản hồi từ máy chủ không hợp lệ.');
+    throw new Error('Invalid server response data.');
   }
 
   // Get the first role from roles list (e.g., ["ROLE_USER"])

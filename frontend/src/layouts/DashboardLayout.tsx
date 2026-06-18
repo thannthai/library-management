@@ -85,11 +85,11 @@ function notifConfig(type: NotificationItem['type']) {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Vừa xong';
-  if (mins < 60) return `${mins} phút trước`;
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} giờ trước`;
-  return `${Math.floor(hours / 24)} ngày trước`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 // ─── Notification Bell ────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ function NotificationBell() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Bell size={15} weight="fill" className="text-indigo-500" />
-                <span className="text-sm font-bold text-slate-800">Thông báo</span>
+                <span className="text-sm font-bold text-slate-800">Notifications</span>
                 {unreadCount > 0 && (
                   <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
                     {unreadCount}
@@ -189,7 +189,7 @@ function NotificationBell() {
                   onClick={handleMarkAllRead}
                   className="text-[11px] text-indigo-500 hover:text-indigo-700 font-semibold cursor-pointer transition-colors"
                 >
-                  Đọc tất cả
+                  Mark all as read
                 </button>
               )}
             </div>
@@ -197,11 +197,11 @@ function NotificationBell() {
             {/* List */}
             <div className="max-h-80 overflow-y-auto">
               {loading && notifications.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 text-xs">Đang tải...</div>
+                <div className="py-8 text-center text-slate-400 text-xs">Loading...</div>
               ) : notifications.length === 0 ? (
                 <div className="py-10 text-center">
                   <CheckCircle size={28} className="text-slate-200 mx-auto mb-2" weight="fill" />
-                  <p className="text-sm text-slate-400">Không có thông báo nào</p>
+                  <p className="text-sm text-slate-400">No notifications</p>
                 </div>
               ) : (
                 notifications.slice(0, 20).map((notif) => {
@@ -280,10 +280,10 @@ function LogoutConfirmDialog({
           </div>
           {/* Text */}
           <h2 className="text-center text-lg font-bold text-slate-800 mb-2">
-            Xác nhận đăng xuất
+            Confirm Logout
           </h2>
           <p className="text-center text-sm text-slate-500 leading-relaxed">
-            Bạn có chắc chắn muốn đăng xuất khỏi BookNest?
+            Are you sure you want to log out of BookNest?
           </p>
           {/* Buttons */}
           <div className="flex gap-3 mt-6">
@@ -292,14 +292,14 @@ function LogoutConfirmDialog({
               onClick={onCancel}
               className="flex-1 h-10 rounded-xl border-2 border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              Hủy
+              Cancel
             </button>
             <button
               type="button"
               onClick={onConfirm}
               className="flex-1 h-10 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition-colors cursor-pointer"
             >
-              Đăng xuất
+              Logout
             </button>
           </div>
         </div>

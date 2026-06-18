@@ -41,17 +41,17 @@ const PHONE_RE  = /^(0[3-9]\d{8})$/;
 
 function validateForm(form: RegisterFormState): FormErrors {
   const errors: FormErrors = {};
-  if (!form.email)                   errors.email    = 'Vui lòng nhập email.';
-  else if (!EMAIL_RE.test(form.email)) errors.email  = 'Địa chỉ email không hợp lệ.';
+  if (!form.email)                   errors.email    = 'Please enter your email.';
+  else if (!EMAIL_RE.test(form.email)) errors.email  = 'Invalid email address.';
 
-  if (!form.fullName.trim())         errors.fullName = 'Vui lòng nhập họ và tên.';
-  else if (form.fullName.trim().length < 2) errors.fullName = 'Họ và tên phải có ít nhất 2 ký tự.';
+  if (!form.fullName.trim())         errors.fullName = 'Please enter your full name.';
+  else if (form.fullName.trim().length < 2) errors.fullName = 'Full name must be at least 2 characters.';
 
-  if (!form.phone)                   errors.phone    = 'Vui lòng nhập số điện thoại.';
-  else if (!PHONE_RE.test(form.phone)) errors.phone  = 'Số điện thoại không hợp lệ (VD: 0912345678).';
+  if (!form.phone)                   errors.phone    = 'Please enter your phone number.';
+  else if (!PHONE_RE.test(form.phone)) errors.phone  = 'Invalid phone number (e.g. 0912345678).';
 
-  if (!form.password)                errors.password = 'Vui lòng nhập mật khẩu.';
-  else if (form.password.length < 6) errors.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
+  if (!form.password)                errors.password = 'Please enter your password.';
+  else if (form.password.length < 6) errors.password = 'Password must be at least 6 characters.';
 
   return errors;
 }
@@ -91,10 +91,10 @@ export default function RegisterPage() {
         phone:    form.phone,
         password: form.password,
       });
-      setSuccessMsg(res.message ?? 'Tạo tài khoản thành công! Đang chuyển hướng…');
+      setSuccessMsg(res.message ?? 'Account created successfully! Redirecting...');
       setTimeout(() => navigate('/login'), 2200);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Đăng ký thất bại. Vui lòng thử lại.');
+      setErrorMsg(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -139,20 +139,20 @@ export default function RegisterPage() {
               transition={{ delay: 0.3, duration: 0.6 }}
             >
               <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
-                Bắt đầu hành trình<br />
-                <span className="text-indigo-200">khám phá tri thức.</span>
+                Start your journey of<br />
+                <span className="text-indigo-200">discovering knowledge.</span>
               </h1>
               <p className="text-indigo-200 text-base leading-relaxed">
-                Tạo tài khoản miễn phí và truy cập ngay kho sách khổng lồ của BookNest.
+                Create a free account and get instant access to BookNest\'s vast library.
               </p>
             </motion.div>
 
             {/* Feature list */}
             <ul className="flex flex-col gap-3 mt-8">
               {[
-                'Mượn & trả sách mọi lúc, mọi nơi',
-                'Theo dõi lịch sử đọc sách cá nhân',
-                'Nhận thông báo hạn trả đúng hạn',
+                'Borrow & return books anytime, anywhere',
+                'Track your personal reading history',
+                'Receive timely return notifications',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3 text-sm text-indigo-100">
                   <CheckCircle size={18} weight="fill" className="text-indigo-300 shrink-0 mt-0.5" />
@@ -185,11 +185,11 @@ export default function RegisterPage() {
 
           {/* Heading */}
           <div className="mb-7">
-            <h2 className="text-2xl font-extrabold text-slate-800">Tạo tài khoản</h2>
+            <h2 className="text-2xl font-extrabold text-slate-800">Create Account</h2>
             <p className="text-sm text-slate-500 mt-1.5">
-              Đã có tài khoản?{' '}
+              Already have an account?{' '}
               <Link to="/login" className="text-indigo-600 font-semibold hover:underline">
-                Đăng nhập ngay
+                Log in now
               </Link>
             </p>
           </div>
@@ -230,7 +230,7 @@ export default function RegisterPage() {
 
             <TextField
               id="register-fullname"
-              label="Họ và tên"
+              label="Full Name"
               type="text"
               autoComplete="name"
               value={form.fullName}
@@ -244,7 +244,7 @@ export default function RegisterPage() {
 
             <TextField
               id="register-phone"
-              label="Số điện thoại"
+              label="Phone Number"
               type="tel"
               autoComplete="tel"
               inputMode="numeric"
@@ -259,7 +259,7 @@ export default function RegisterPage() {
 
             <TextField
               id="register-password"
-              label="Mật khẩu"
+              label="Password"
               type={showPass ? 'text' : 'password'}
               autoComplete="new-password"
               value={form.password}
@@ -276,7 +276,7 @@ export default function RegisterPage() {
                         onClick={() => setShowPass((v) => !v)}
                         edge="end"
                         size="small"
-                        aria-label={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        aria-label={showPass ? 'Hide password' : 'Show password'}
                       >
                         {showPass ? <EyeSlash size={18} /> : <Eye size={18} />}
                       </IconButton>
@@ -304,7 +304,7 @@ export default function RegisterPage() {
                 <CircularProgress size={20} sx={{ color: 'white' }} />
               ) : (
                 <>
-                  Tạo tài khoản
+                  Create Account
                   <ArrowRight size={17} weight="bold" />
                 </>
               )}
@@ -313,16 +313,15 @@ export default function RegisterPage() {
 
           {/* Terms */}
           <p className="mt-5 text-center text-xs text-slate-400 leading-relaxed">
-            Bằng cách đăng ký, bạn đồng ý với{' '}
-            <button type="button" className="text-indigo-500 hover:underline cursor-pointer">Điều khoản sử dụng</button>{' '}
-            và{' '}
-            <button type="button" className="text-indigo-500 hover:underline cursor-pointer">Chính sách bảo mật</button>{' '}
-            của BookNest.
+            By registering, you agree to BookNest's{' '}
+            <button type="button" className="text-indigo-500 hover:underline cursor-pointer">Terms of Service</button>{' '}
+            and{' '}
+            <button type="button" className="text-indigo-500 hover:underline cursor-pointer">Privacy Policy</button>.
           </p>
 
           {/* Footer */}
           <p className="mt-6 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} BookNest. Mọi quyền được bảo lưu.
+            © {new Date().getFullYear()} BookNest. All rights reserved.
           </p>
         </div>
       </motion.main>

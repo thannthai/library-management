@@ -18,7 +18,7 @@ import {
   Clock,
   ArrowRight,
   CircleNotch,
-  Sparkle,
+  Trophy,
   Star,
   Trash,
   Warning,
@@ -38,7 +38,7 @@ import { toast } from 'react-hot-toast';
 
 const formatDateVi = (dateStr: string | null | undefined) => {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('vi-VN', {
+  return new Date(dateStr).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -56,10 +56,10 @@ const getDaysRemaining = (dueDateStr: string | null | undefined): number => {
 
 function getDueBadge(daysRemaining: number, isOverdue: boolean) {
   if (isOverdue || daysRemaining < 0)
-    return { bg: 'bg-rose-50', text: 'text-rose-600', dot: 'bg-rose-500', label: `Quá hạn ${Math.abs(daysRemaining)} ngày` };
+    return { bg: 'bg-rose-50', text: 'text-rose-600', dot: 'bg-rose-500', label: `Overdue by ${Math.abs(daysRemaining)} days` };
   if (daysRemaining <= 3)
-    return { bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-500', label: `Còn ${daysRemaining} ngày` };
-  return { bg: 'bg-emerald-50', text: 'text-emerald-600', dot: 'bg-emerald-500', label: `Còn ${daysRemaining} ngày` };
+    return { bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-500', label: `${daysRemaining} days left` };
+  return { bg: 'bg-emerald-50', text: 'text-emerald-600', dot: 'bg-emerald-500', label: `${daysRemaining} days left` };
 }
 
 // ─── Book Cover ───────────────────────────────────────────────────────────────
@@ -146,11 +146,11 @@ function RatingModal({
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const starLabels = ['', 'Rất tệ', 'Tệ', 'Bình thường', 'Tốt', 'Xuất sắc'];
+  const starLabels = ['', 'Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
 
   const handleSubmit = async () => {
     if (selectedStar === 0) {
-      toast.error('Vui lòng chọn số sao để đánh giá!');
+      toast.error('Please select a rating!');
       return;
     }
     setSubmitting(true);
@@ -173,7 +173,7 @@ function RatingModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <h3 className="font-bold text-slate-800 text-base">Đánh giá sách</h3>
+          <h3 className="font-bold text-slate-800 text-base">Rate Book</h3>
           <button
             type="button"
             onClick={onClose}
@@ -190,13 +190,13 @@ function RatingModal({
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-slate-800 text-sm truncate leading-snug">{loan.bookTitle}</p>
-            <p className="text-xs text-slate-500 mt-0.5 truncate">{loan.authorName || 'Chưa rõ tác giả'}</p>
+            <p className="text-xs text-slate-500 mt-0.5 truncate">{loan.authorName || 'Unknown Author'}</p>
           </div>
         </div>
 
         {/* Star selector */}
         <div className="px-5 py-5">
-          <p className="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wider">Chọn số sao</p>
+          <p className="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wider">Select Rating</p>
           <div className="flex items-center gap-2 mb-2">
             {Array.from({ length: 5 }).map((_, i) => {
               const val = i + 1;
@@ -228,12 +228,12 @@ function RatingModal({
           {/* Comment input */}
           <div className="mt-4">
             <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider block mb-2">
-              Nhận xét (tuỳ chọn)
+              Review (optional)
             </label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Chia sẻ cảm nhận của bạn về cuốn sách này..."
+              placeholder="Share your thoughts on this book..."
               rows={3}
               maxLength={500}
               className="w-full text-sm px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-400 resize-none text-slate-700 placeholder:text-slate-400 transition-all"
@@ -249,7 +249,7 @@ function RatingModal({
             onClick={onClose}
             className="flex-1 h-10 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            Hủy
+            Cancel
           </button>
           <button
             type="button"
@@ -262,7 +262,7 @@ function RatingModal({
             ) : (
               <>
                 <Star size={14} weight="fill" />
-                Gửi đánh giá
+                Submit Review
               </>
             )}
           </button>
@@ -291,7 +291,7 @@ function CurrentLoansTab({
     return (
       <div className="flex items-center justify-center py-14 gap-2 text-slate-400 text-sm">
         <CircleNotch size={18} className="animate-spin text-indigo-500" />
-        Đang tải...
+        Loading...
       </div>
     );
   }
@@ -307,15 +307,15 @@ function CurrentLoansTab({
           <BookOpen size={26} className="text-indigo-400" weight="fill" />
         </div>
         <div>
-          <p className="font-semibold text-slate-700 text-sm">Bạn chưa mượn sách nào</p>
-          <p className="text-xs text-slate-400 mt-1">Duyệt danh mục sách và bắt đầu đọc ngay!</p>
+          <p className="font-semibold text-slate-700 text-sm">You have no active loans</p>
+          <p className="text-xs text-slate-400 mt-1">Browse books and start reading now!</p>
         </div>
         <button
           type="button"
           onClick={() => navigate('/dashboard/books')}
           className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-colors cursor-pointer"
         >
-          Duyệt sách <ArrowRight size={12} />
+          Browse Books <ArrowRight size={12} />
         </button>
       </div>
     );
@@ -347,15 +347,15 @@ function CurrentLoansTab({
             {/* Info */}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-800 text-sm truncate leading-snug">{loan.bookTitle}</p>
-              <p className="text-xs text-slate-500 mt-0.5 truncate">{loan.authorName || 'Chưa rõ tác giả'}</p>
+              <p className="text-xs text-slate-500 mt-0.5 truncate">{loan.authorName || 'Unknown Author'}</p>
               <div className="flex items-center gap-1.5 mt-2">
                 <Clock size={11} className="text-slate-400 shrink-0" />
                 <span className="text-[11px] text-slate-400">
-                  Hạn: {formatDateVi(loan.dueDate)}
+                  Due: {formatDateVi(loan.dueDate)}
                 </span>
                 {loan.status === 'PENDING_PICKUP' && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-                    Chờ nhận
+                    Pending Pickup
                   </span>
                 )}
               </div>
@@ -381,7 +381,7 @@ function CurrentLoansTab({
                   ) : (
                     <ArrowCounterClockwise size={11} weight="bold" />
                   )}
-                  Gia hạn
+                  Renew
                 </button>
               )}
             </div>
@@ -409,7 +409,7 @@ function ReservationsTab({
     return (
       <div className="flex items-center justify-center py-14 gap-2 text-slate-400 text-sm">
         <CircleNotch size={18} className="animate-spin text-indigo-500" />
-        Đang tải...
+        Loading...
       </div>
     );
   }
@@ -423,9 +423,9 @@ function ReservationsTab({
           <CalendarCheck size={26} className="text-violet-400" weight="fill" />
         </div>
         <div>
-          <p className="font-semibold text-slate-700 text-sm">Không có đặt trước nào</p>
+          <p className="font-semibold text-slate-700 text-sm">No reservations found</p>
           <p className="text-xs text-slate-400 mt-1">
-            Khi sách bạn muốn hết bản sao, hãy dùng nút "Reserve" để vào hàng đợi.
+            When a book is out of copies, use the "Reserve" button to join the queue.
           </p>
         </div>
       </div>
@@ -456,9 +456,9 @@ function ReservationsTab({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-slate-800 text-sm truncate leading-snug">{res.bookTitle}</p>
-            <p className="text-xs text-slate-500 mt-0.5 truncate">{res.authorName || 'Chưa rõ tác giả'}</p>
+            <p className="text-xs text-slate-500 mt-0.5 truncate">{res.authorName || 'Unknown Author'}</p>
             <p className="text-[11px] text-slate-400 mt-2">
-              Đặt ngày: {new Date(res.reservedDate).toLocaleDateString('vi-VN')}
+              Reserved: {new Date(res.reservedDate).toLocaleDateString('en-US')}
             </p>
           </div>
 
@@ -466,11 +466,11 @@ function ReservationsTab({
           <div className="flex flex-col items-end gap-2 shrink-0">
             {res.status === 'FULFILLED' ? (
               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                Sách đã sẵn sàng
+                Ready for Pickup
               </span>
             ) : (
               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-violet-50 text-violet-600 border border-violet-100">
-                #{res.priorityPosition} trong hàng
+                #{res.priorityPosition} in queue
               </span>
             )}
             <button
@@ -484,7 +484,7 @@ function ReservationsTab({
               ) : (
                 <Trash size={11} />
               )}
-              Hủy
+              Cancel
             </button>
           </div>
         </motion.div>
@@ -508,7 +508,7 @@ function ReadingHistoryTab({
     return (
       <div className="flex items-center justify-center py-14 gap-2 text-slate-400 text-sm">
         <CircleNotch size={18} className="animate-spin text-indigo-500" />
-        Đang tải...
+        Loading...
       </div>
     );
   }
@@ -522,8 +522,8 @@ function ReadingHistoryTab({
           <ClockCounterClockwise size={26} className="text-emerald-400" weight="fill" />
         </div>
         <div>
-          <p className="font-semibold text-slate-700 text-sm">Chưa có lịch sử đọc sách</p>
-          <p className="text-xs text-slate-400 mt-1">Các sách đã trả sẽ xuất hiện tại đây.</p>
+          <p className="font-semibold text-slate-700 text-sm">No reading history yet</p>
+          <p className="text-xs text-slate-400 mt-1">Your returned books will appear here.</p>
         </div>
       </div>
     );
@@ -547,11 +547,11 @@ function ReadingHistoryTab({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-slate-800 text-sm truncate leading-snug">{loan.bookTitle}</p>
-            <p className="text-xs text-slate-500 mt-0.5 truncate">{loan.authorName || 'Chưa rõ tác giả'}</p>
+            <p className="text-xs text-slate-500 mt-0.5 truncate">{loan.authorName || 'Unknown Author'}</p>
             <div className="flex items-center gap-1.5 mt-2">
               <CheckCircle size={11} className="text-emerald-500 shrink-0" weight="fill" />
               <span className="text-[11px] text-slate-400">
-                Trả {formatDateVi(loan.returnDate || loan.updatedAt)}
+                Returned {formatDateVi(loan.returnDate || loan.updatedAt)}
               </span>
             </div>
           </div>
@@ -559,7 +559,7 @@ function ReadingHistoryTab({
           {/* Right: badge + rating */}
           <div className="shrink-0 flex flex-col items-end gap-2">
             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-              Đã trả
+              Returned
             </span>
 
             {/* Rating: show stars if rated, show button if not */}
@@ -572,7 +572,7 @@ function ReadingHistoryTab({
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 text-[11px] font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
               >
                 <Star size={11} weight="fill" />
-                Đánh giá
+                Rate
               </button>
             )}
           </div>
@@ -595,8 +595,8 @@ function StatsRow({
 }) {
   const stats = [
     {
-      label: 'Đang mượn',
-      sub: 'Sách đang giữ',
+      label: 'Active Loans',
+      sub: 'Currently borrowing',
       value: activeLoans,
       icon: Books,
       iconBg: 'bg-indigo-100',
@@ -604,8 +604,8 @@ function StatsRow({
       valueColor: 'text-indigo-600',
     },
     {
-      label: 'Đặt trước',
-      sub: 'Trong hàng đợi',
+      label: 'Reservations',
+      sub: 'In queue',
       value: reservationCount,
       icon: CalendarCheck,
       iconBg: 'bg-violet-100',
@@ -613,8 +613,8 @@ function StatsRow({
       valueColor: 'text-violet-600',
     },
     {
-      label: 'Đã đọc',
-      sub: 'Sách đã trả',
+      label: 'Completed',
+      sub: 'Returned books',
       value: returnedCount,
       icon: CheckCircle,
       iconBg: 'bg-emerald-100',
@@ -662,13 +662,13 @@ function ReadingGoalWidget({ returnedCount }: { returnedCount: number }) {
     >
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-[15px] font-bold text-slate-800">Mục tiêu đọc sách 2026</h2>
+          <h2 className="text-[15px] font-bold text-slate-800">2026 Reading Goal</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {returnedCount} / {target} cuốn đã đọc
+            {returnedCount} / {target} books read
           </p>
         </div>
         <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
-          <Sparkle size={18} weight="fill" className="text-indigo-500" />
+          <Trophy size={18} weight="fill" className="text-indigo-500" />
         </div>
       </div>
       <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -680,7 +680,7 @@ function ReadingGoalWidget({ returnedCount }: { returnedCount: number }) {
           transition={{ delay: 0.5, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         />
       </div>
-      <p className="text-xs text-slate-400 mt-2">{pct}% hoàn thành</p>
+      <p className="text-xs text-slate-400 mt-2">{pct}% completed</p>
     </motion.div>
   );
 }
@@ -690,14 +690,14 @@ function ReadingGoalWidget({ returnedCount }: { returnedCount: number }) {
 type TabId = 'loans' | 'reservations' | 'history';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'loans',        label: 'Đang Mượn',     icon: Books },
-  { id: 'reservations', label: 'Đặt Trước',     icon: CalendarCheck },
-  { id: 'history',      label: 'Lịch Sử Đọc',  icon: ClockCounterClockwise },
+  { id: 'loans',        label: 'Active Loans',     icon: Books },
+  { id: 'reservations', label: 'Reservations',     icon: CalendarCheck },
+  { id: 'history',      label: 'Reading History',  icon: ClockCounterClockwise },
 ];
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const firstName = user?.fullName?.split(' ').pop() || 'bạn';
+  const firstName = user?.fullName?.split(' ').pop() || 'there';
 
   const [activeTab, setActiveTab] = useState<TabId>('loans');
 
@@ -722,7 +722,7 @@ export default function DashboardPage() {
       const res = await getMyLoans(undefined, 0, 200);
       setLoans(res.content.filter((l) => l.status !== 'CANCELED'));
     } catch {
-      toast.error('Không thể tải danh sách sách mượn');
+      toast.error('Could not load your loans');
     } finally {
       setLoansLoading(false);
     }
@@ -739,7 +739,7 @@ export default function DashboardPage() {
     setReservationsLoading(true);
     getMyReservations()
       .then(setReservations)
-      .catch(() => toast.error('Không thể tải danh sách đặt trước'))
+      .catch(() => toast.error('Could not load your reservations'))
       .finally(() => setReservationsLoading(false));
   }, [user]);
 
@@ -748,10 +748,10 @@ export default function DashboardPage() {
     setRenewingId(loanId);
     try {
       await renewBookLoan(loanId);
-      toast.success('Gia hạn sách thành công!');
+      toast.success('Book renewed successfully!');
       await fetchLoans();
     } catch (err: any) {
-      toast.error(err.message || 'Không thể gia hạn sách.');
+      toast.error(err.message || 'Could not renew book.');
     } finally {
       setRenewingId(null);
     }
@@ -762,10 +762,10 @@ export default function DashboardPage() {
     setCancellingId(id);
     try {
       await cancelReservation(id);
-      toast.success('Hủy đặt trước thành công!');
+      toast.success('Reservation cancelled successfully!');
       setReservations((prev) => prev.filter((r) => r.id !== id));
     } catch (err: any) {
-      toast.error(err.message || 'Không thể hủy đặt trước.');
+      toast.error(err.message || 'Could not cancel reservation.');
     } finally {
       setCancellingId(null);
     }
@@ -782,9 +782,9 @@ export default function DashboardPage() {
             : l
         )
       );
-      toast.success('Cảm ơn bạn đã đánh giá sách! ⭐');
+      toast.success('Thank you for rating this book! ⭐');
     } catch (err: any) {
-      toast.error(err.message || 'Không thể lưu đánh giá. Vui lòng thử lại.');
+      toast.error(err.message || 'Could not submit rating. Please try again.');
       throw err; // propagate so modal stays open on error
     }
   };
@@ -802,6 +802,9 @@ export default function DashboardPage() {
   const overdueLoans = loans.filter(
     (l) => l.status === 'OVERDUE' || (l.status === 'CHECKED_OUT' && l.isOverdue)
   );
+
+  // Pending pickup warning
+  const pendingPickupLoans = loans.filter((l) => l.status === 'PENDING_PICKUP');
 
   return (
     <DashboardLayout pageTitle="Dashboard">
@@ -825,10 +828,10 @@ export default function DashboardPage() {
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
           <h1 className="text-2xl font-extrabold text-slate-800">
-            Xin chào, <span className="text-indigo-600">{firstName}</span> 👋
+            Welcome back, <span className="text-indigo-600">{firstName}</span> 👋
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Theo dõi hành trình đọc sách và quản lý thư viện của bạn.
+            Track your reading journey and manage your library.
           </p>
         </motion.div>
 
@@ -842,10 +845,29 @@ export default function DashboardPage() {
             <Warning size={18} weight="fill" className="text-rose-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-bold text-rose-700">
-                Bạn có {overdueLoans.length} cuốn sách quá hạn!
+                You have {overdueLoans.length} overdue book(s)!
               </p>
               <p className="text-xs text-rose-500 mt-0.5">
-                Vui lòng trả sách sớm để tránh phí phạt phát sinh.
+                Please return them soon to avoid late fees.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Pending Pickup warning banner */}
+        {pendingPickupLoans.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3"
+          >
+            <Warning size={18} weight="fill" className="text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-amber-700">
+                You have {pendingPickupLoans.length} book(s) ready for pickup!
+              </p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Please collect them at the counter within 24 hours. Uncollected books will be automatically cancelled.
               </p>
             </div>
           </motion.div>

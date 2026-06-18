@@ -1,56 +1,84 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+
 import {
   MagnifyingGlass, SquaresFour, Rows, BookOpen, X,
   CaretLeft, CaretRight, BookmarkSimple, Warning, CheckCircle,
+  CircleNotch,
 } from '@phosphor-icons/react';
 
-// MUI Dialog (as specified in instructions — use MUI for complex components)
+// MUI Dialog
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
 
 import Navbar from '../../layouts/Navbar';
-import { MOCK_BOOKS, GENRES, AUTHORS, GENRE_COLOR_MAP } from '../../data/landingMockData';
-import type { Book } from '../../types/landing.types';
-import type { BookLoanResponse } from '../../types/loans.types';
 import { useAuth } from '../../context/AuthContext';
-import { borrowBook, getMyLoans } from '../../api/loansApi';
+import { borrowBook, getMyLoans, cancelPendingLoan, getLoanPaymentUrl } from '../../api/loansApi';
+import { getBooks, getGenres, getAuthors } from '../../api/booksApi';
+import type { BookResponse, GenreResponse } from '../../types/books.types';
+import type { BookLoanResponse } from '../../types/loans.types';
 import CheckoutModal from '../../components/CheckoutModal';
+import { toast } from 'react-hot-toast';
+
+// ─── Cover URL helper ────────────────────────────────────────────────────────
+const getGoogleBooksUrl = (url: string | undefined, zoom: number): string | undefined => {
+  if (!url) return undefined;
+  if (url.includes('google.com/books') || url.includes('books.google.com')) {
+    const cleanUrl = url.replace('http://', 'https://');
+    if (/zoom=\d+/.test(cleanUrl)) {
+      return cleanUrl.replace(/zoom=\d+/, `zoom=${zoom}`);
+    } else {
+      const separator = cleanUrl.includes('?') ? '&' : '?';
+      return `${cleanUrl}${separator}zoom=${zoom}`;
+    }
+  }
+  return url;
+};
+
+// ─── Premium CSS Book Cover Placeholder ──────────────────────────────────────
+function CSSBookCover({ title, author }: { title: string; author: string }) {
+  return (
+    <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700 p-4 flex flex-col justify-between text-white select-none">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[8px] font-bold tracking-widest uppercase opacity-75">BookNest Collection</span>
+        <h4 className="font-bold text-xs leading-snug line-clamp-3 text-white">
+          {title}
+        </h4>
+      </div>
+      <p className="text-[9px] font-semibold opacity-90 line-clamp-1 border-t border-white/20 pt-2 text-white">{author}</p>
+    </div>
+  );
+}
 
 // ─── Book Detail Dialog (MUI) ─────────────────────────────────────────────────
 interface BookDialogProps {
-  book: Book | null;
-  onClose: () => void;
-  /** Called when API returns a paid-checkout response — opens CheckoutModal */
+  book: BookResponse | null;
+  onClose: (needRefresh?: boolean) => void;
   onPaidCheckout: (loan: BookLoanResponse) => void;
-  isBorrowing?: boolean;
+  activeLoan?: BookLoanResponse;
 }
 
-function BookDetailDialog({ book, onClose, onPaidCheckout, isBorrowing }: BookDialogProps) {
-  const navigate          = useNavigate();
+function BookDetailDialog({ book, onClose, onPaidCheckout, activeLoan }: BookDialogProps) {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [showLogin,  setShowLogin]  = useState(false);
-  const [borrowing,  setBorrowing]  = useState(false);
-  const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [borrowing, setBorrowing] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Reset state khi đổi sách
   useEffect(() => {
     setShowLogin(false);
     setErrorMsg(null);
     setBorrowing(false);
+    setPaying(false);
+    setCancelling(false);
   }, [book]);
 
-  const pillCls  = book ? (GENRE_COLOR_MAP[book.genreColor] ?? 'bg-slate-100 text-slate-600') : '';
-  const imgUrl   = book ? `https://picsum.photos/seed/${book.coverSeed}/400/540` : '';
-  const borrowStr = book
-    ? book.borrowCount >= 1000
-      ? `${(book.borrowCount / 1000).toFixed(1)}k lượt mượn`
-      : `${book.borrowCount} lượt mượn`
-    : '';
-
+  // ── All hooks must be called BEFORE any early returns ──
   const handleBorrow = useCallback(async () => {
+    if (!book) return;
     if (!isAuthenticated) {
       setShowLogin(true);
       setTimeout(() => {
@@ -59,39 +87,72 @@ function BookDetailDialog({ book, onClose, onPaidCheckout, isBorrowing }: BookDi
       }, 2000);
       return;
     }
-
-    if (!book || borrowing) return;
-
     setBorrowing(true);
     setErrorMsg(null);
     try {
-      // Vì book.id từ MOCK_BOOKS là string (vd 'b01'), ta chuyển sang số.
-      // Nếu API trả lỗi (404) vì sách mock không tồn tại trong DB, ta vẫn bắt lỗi bình thường.
-      const realBookId = Number(book.id.replace(/\D/g, '')) || 1;
-      const loanResponse = await borrowBook(realBookId);
-
+      const loanResponse = await borrowBook(book.id);
       if (loanResponse.sePayCheckout !== null) {
-        // Nhánh B: cần thanh toán → mở CheckoutModal
         onClose();
         onPaidCheckout(loanResponse);
       } else {
-        // Nhánh A: miễn phí (có Subscription) → thành công ngay
         onClose();
         navigate('/dashboard/loans');
       }
     } catch (err: any) {
-      const serverMsg = err.response?.data?.message;
-      const msg = serverMsg || (err instanceof Error ? err.message : 'Không thể thực hiện yêu cầu mượn sách.');
-      setErrorMsg(msg);
+      setErrorMsg(err.message || 'An error occurred while processing your borrow request.');
     } finally {
       setBorrowing(false);
     }
-  }, [book, borrowing, isAuthenticated, navigate, onClose, onPaidCheckout]);
+  }, [book, isAuthenticated, navigate, onClose, onPaidCheckout]);
+
+  const handlePayPending = useCallback(async () => {
+    if (!activeLoan) return;
+    setPaying(true);
+    setErrorMsg(null);
+    try {
+      const sePayCheckout = await getLoanPaymentUrl(activeLoan.id);
+      onClose();
+      onPaidCheckout({ ...activeLoan, sePayCheckout });
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error loading payment information.');
+    } finally {
+      setPaying(false);
+    }
+  }, [activeLoan, onClose, onPaidCheckout]);
+
+  const handleCancelLoan = useCallback(async () => {
+    if (!activeLoan) return;
+    if (!window.confirm('Are you sure you want to cancel this borrow request?')) return;
+    setCancelling(true);
+    setErrorMsg(null);
+    try {
+      await cancelPendingLoan(activeLoan.id);
+      toast.success('Borrow request cancelled successfully.');
+      onClose(true);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Unable to cancel borrow request.');
+    } finally {
+      setCancelling(false);
+    }
+  }, [activeLoan, onClose]);
+
+  // Early return AFTER all hooks
+  if (!book) return null;
+
+  const authorStr = book.authors && book.authors.length > 0
+    ? book.authors.map(a => a.name).join(', ')
+    : 'Unknown Author';
+
+  const genreName = book.genres && book.genres.length > 0
+    ? book.genres[0].name
+    : 'General';
+
+  const imgUrl = getGoogleBooksUrl(book.coverImageUrl, 2);
 
   return (
     <Dialog
       open={Boolean(book)}
-      onClose={onClose}
+      onClose={() => onClose()}
       maxWidth="sm"
       fullWidth
       slotProps={{
@@ -105,352 +166,397 @@ function BookDetailDialog({ book, onClose, onPaidCheckout, isBorrowing }: BookDi
       }}
     >
       <DialogContent sx={{ padding: 0 }}>
-        {book && (
-          <div className="relative">
-            {/* Close button */}
-            <IconButton
-              onClick={onClose}
-              size="small"
-              sx={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                zIndex: 10,
-                background: 'rgba(255,255,255,0.9)',
-                backdropFilter: 'blur(4px)',
-                '&:hover': { background: 'rgba(241,245,249,1)' },
-              }}
-            >
-              <X size={16} weight="bold" />
-            </IconButton>
+        <div className="relative">
+          {/* Close button */}
+          <IconButton
+            onClick={() => onClose()}
+            sx={{
+              position: 'absolute', right: 12, top: 12, zIndex: 10,
+              backgroundColor: 'rgba(255,255,255,0.85)',
+              '&:hover': { backgroundColor: 'white' },
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            }}
+          >
+            <X size={16} weight="bold" />
+          </IconButton>
 
-            <div className="flex flex-col sm:flex-row">
-              {/* Cover */}
-              <div
-                className="w-full sm:w-[180px] shrink-0 aspect-[3/4] sm:aspect-auto sm:h-auto overflow-hidden"
-                style={{ background: book.coverBg, minHeight: '220px' }}
-              >
-                <img
-                  src={imgUrl}
-                  alt={book.title}
-                  className="w-full h-full object-cover"
-                />
+          {/* Error banner */}
+          {errorMsg && (
+            <div className="bg-rose-50 border-b border-rose-100 px-6 py-3.5 flex items-start gap-2.5 text-rose-600 text-xs font-semibold">
+              <Warning size={15} className="shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Main layout */}
+          <div className="p-6 sm:p-8 flex flex-col sm:flex-row gap-6">
+            {/* Left — Cover */}
+            <div className="w-full sm:w-[180px] aspect-[3/4] rounded-xl overflow-hidden shadow-md shrink-0 border border-slate-100 relative bg-slate-50">
+              {imgUrl ? (
+                <img src={imgUrl} alt={book.title} className="w-full h-full object-cover" />
+              ) : (
+                <CSSBookCover title={book.title} author={authorStr} />
+              )}
+            </div>
+
+            {/* Right — Details */}
+            <div className="flex-1 flex flex-col justify-between min-w-0">
+              <div className="flex flex-col gap-2.5">
+                <span className="w-fit text-[10.5px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                  {genreName}
+                </span>
+                <h2 className="font-extrabold text-slate-800 text-lg leading-snug tracking-tight">
+                  {book.title}
+                </h2>
+                <div className="text-xs text-slate-400 font-medium">
+                  Author: <span className="text-slate-600 font-semibold">{authorStr}</span>
+                </div>
+                {book.description && (
+                  <p className="text-xs text-slate-500 leading-relaxed max-h-[140px] overflow-y-auto pr-1">
+                    {book.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-1 text-[11px] text-slate-400 pt-0.5">
+                  <BookmarkSimple size={12} />
+                  {book.availableCopies}/{book.totalCopies} copies available
+                </div>
               </div>
 
-              {/* Details */}
-              <div className="flex-1 p-6 flex flex-col gap-4">
-                {/* Title + Author */}
-                <div>
-                  <h2 className="text-xl font-extrabold text-slate-900 leading-tight tracking-tight">
-                    {book.title}
-                  </h2>
-                  <p className="text-sm text-slate-500 mt-1">{book.author}</p>
-                </div>
-
-                {/* Meta */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs font-semibold px-3 py-1 rounded-full ${pillCls}`}>
-                    {book.genre}
-                  </span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <BookmarkSimple size={12} />
-                    {borrowStr}
-                  </span>
-                </div>
-
-                {/* Description */}
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {book.description}
-                </p>
-
-                {/* Login warning */}
-                <AnimatePresence>
-                  {showLogin && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl"
-                    >
-                      <Warning size={16} weight="bold" className="text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-semibold text-amber-800">
-                          Yêu cầu đăng nhập tài khoản sinh viên
-                        </p>
-                        <p className="text-xs text-amber-600 mt-0.5">
-                          Đang chuyển hướng đến trang đăng nhập…
-                        </p>
+              {/* Actions */}
+              <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col gap-3">
+                {showLogin ? (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-700 text-xs font-medium">
+                    <Warning size={14} />
+                    Please sign in to borrow books. Redirecting...
+                  </div>
+                ) : activeLoan ? (
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold rounded-xl">
+                      <CheckCircle size={15} />
+                      <span>Loan status: <strong>{activeLoan.status.replace(/_/g, ' ')}</strong></span>
+                    </div>
+                    {activeLoan.status === 'PENDING_PAYMENT' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handlePayPending}
+                          disabled={paying}
+                          className="flex-1 cursor-pointer h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                        >
+                          {paying ? <CircleNotch className="animate-spin" size={14} /> : null}
+                          Pay Now ({activeLoan.paymentAmount?.toLocaleString()}₫)
+                        </button>
+                        <button
+                          onClick={handleCancelLoan}
+                          disabled={cancelling}
+                          className="px-3 cursor-pointer h-10 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-500 text-xs font-semibold flex items-center justify-center transition-colors"
+                        >
+                          {cancelling ? <CircleNotch className="animate-spin" size={14} /> : 'Cancel'}
+                        </button>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Error message */}
-                <AnimatePresence>
-                  {errorMsg && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="flex items-start gap-2.5 p-3 bg-rose-50 border border-rose-200 rounded-xl"
-                    >
-                      <Warning size={16} weight="bold" className="text-rose-500 shrink-0 mt-0.5" />
-                      <p className="text-xs font-semibold text-rose-700">{errorMsg}</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Borrow button */}
-                {isBorrowing ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="cursor-not-allowed mt-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold rounded-xl w-full"
-                  >
-                    <CheckCircle size={16} weight="fill" className="text-indigo-600" />
-                    Bạn đang mượn sách này
-                  </button>
+                    )}
+                  </div>
                 ) : (
                   <button
-                    type="button"
                     onClick={handleBorrow}
-                    disabled={borrowing}
-                    className="cursor-pointer mt-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-300/30 active:scale-[0.97] w-full"
+                    disabled={borrowing || book.availableCopies === 0}
+                    className="w-full cursor-pointer h-11 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-indigo-200/50 transition-all duration-200 active:scale-[0.98]"
                   >
-                    {borrowing ? (
-                      <>
-                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                        </svg>
-                        Đang xử lý…
-                      </>
-                    ) : (
-                      <>
-                        <BookmarkSimple size={16} weight="bold" />
-                        Đăng ký mượn sách
-                      </>
-                    )}
+                    {borrowing && <CircleNotch className="animate-spin" size={14} />}
+                    {book.availableCopies > 0 ? 'Borrow Now' : 'Out of Copies'}
                   </button>
                 )}
               </div>
             </div>
           </div>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ─── Book Card ────────────────────────────────────────────────────────────────
-function BookCard({
-  book,
-  view,
-  onClick,
-  isBorrowing,
-}: {
-  book: Book;
+// ─── BookCard ─────────────────────────────────────────────────────────────────
+interface BookCardProps {
+  book: BookResponse;
   view: 'grid' | 'list';
-  onClick: (book: Book) => void;
-  isBorrowing?: boolean;
-}) {
-  const pillCls  = GENRE_COLOR_MAP[book.genreColor] ?? 'bg-slate-100 text-slate-600';
-  const imgUrl   = `https://picsum.photos/seed/${book.coverSeed}/200/280`;
-  const borrowStr = book.borrowCount >= 1000
-    ? `${(book.borrowCount / 1000).toFixed(1)}k`
-    : String(book.borrowCount);
+  onClick: (b: BookResponse) => void;
+  activeLoan?: BookLoanResponse;
+}
+
+function BookCard({ book, view, onClick, activeLoan }: BookCardProps) {
+  const authorStr = book.authors && book.authors.length > 0
+    ? book.authors.map(a => a.name).join(', ')
+    : 'Unknown Author';
+
+  const genreName = book.genres && book.genres.length > 0
+    ? book.genres[0].name
+    : 'General';
+
+  const imgUrl = getGoogleBooksUrl(book.coverImageUrl, 2);
 
   if (view === 'list') {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28 }}
+      <article
         onClick={() => onClick(book)}
-        className="flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200 hover:border-indigo-200 hover:shadow-md transition-all cursor-pointer group"
+        className="group cursor-pointer flex bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-indigo-200 hover:shadow-md transition-all duration-200"
+        style={{ minHeight: '88px' }}
       >
-        <div className="w-14 h-[80px] rounded-lg overflow-hidden shrink-0" style={{ background: book.coverBg }}>
-          <img src={imgUrl} alt={book.title} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300" loading="lazy" />
+        {/* Cover */}
+        <div className="w-[72px] sm:w-24 shrink-0 relative overflow-hidden bg-slate-50">
+          {imgUrl ? (
+            <img
+              src={imgUrl}
+              alt={book.title}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+            />
+          ) : (
+            <CSSBookCover title={book.title} author={authorStr} />
+          )}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-slate-800 text-sm truncate group-hover:text-indigo-600 transition-colors">{book.title}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{book.author}</p>
-          <div className="flex items-center gap-2.5 mt-2 flex-wrap">
-            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${pillCls}`}>{book.genre}</span>
-            {isBorrowing && (
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
-                Borrowing
+        {/* Info */}
+        <div className="flex-1 px-4 py-3 flex flex-col justify-between min-w-0">
+          <div className="flex flex-col gap-0.5">
+            <h3 className="font-bold text-slate-800 text-sm sm:text-[0.9rem] group-hover:text-indigo-600 transition-colors line-clamp-1 leading-snug">
+              {book.title}
+            </h3>
+            <p className="text-[11.5px] text-slate-400 line-clamp-1">{authorStr}</p>
+          </div>
+          <div className="flex items-center justify-between gap-3 mt-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                {genreName}
+              </span>
+              <span className="text-[10.5px] text-slate-400 flex items-center gap-1">
+                <BookmarkSimple size={11} /> {book.availableCopies}/{book.totalCopies} available
+              </span>
+            </div>
+            {activeLoan && (
+              <span className={`shrink-0 text-[9.5px] font-bold px-2 py-0.5 rounded ${
+                activeLoan.status === 'PENDING_PAYMENT' ? 'bg-amber-100 text-amber-800' :
+                activeLoan.status === 'PENDING_PICKUP' ? 'bg-blue-100 text-blue-800' :
+                activeLoan.status === 'CHECKED_OUT' ? 'bg-indigo-600 text-white' :
+                'bg-rose-100 text-rose-800'
+              }`}>
+                {activeLoan.status.replace('_', ' ')}
               </span>
             )}
-            <span className="text-[11px] text-slate-400 flex items-center gap-1">
-              <BookmarkSimple size={11} />{borrowStr} lượt mượn
-            </span>
           </div>
         </div>
-        <span className="text-slate-300 group-hover:text-indigo-400 transition-colors shrink-0">
-          <CaretRight size={14} />
-        </span>
-      </motion.div>
+        {/* Chevron hint */}
+        <div className="flex items-center pr-4 text-slate-300 group-hover:text-indigo-400 transition-colors shrink-0">
+          <CaretRight size={14} weight="bold" />
+        </div>
+      </article>
     );
   }
 
+  // Grid view
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28 }}
+    <article
       onClick={() => onClick(book)}
-      className="flex flex-col gap-2.5 cursor-pointer group relative"
+      className="group cursor-pointer flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-indigo-200 hover:shadow-md transition-all duration-200"
     >
-      <div className="relative overflow-hidden rounded-xl aspect-[3/4]" style={{ background: book.coverBg }}>
-        {isBorrowing && (
-          <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-600 text-white shadow">
-            <CheckCircle size={10} weight="fill" className="text-white" />
-            Borrowing
+      {/* Cover */}
+      <div className="relative overflow-hidden aspect-[3/4] bg-slate-50">
+        {imgUrl ? (
+          <img
+            src={imgUrl}
+            alt={book.title}
+            loading="lazy"
+            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+          />
+        ) : (
+          <CSSBookCover title={book.title} author={authorStr} />
+        )}
+        {activeLoan && (
+          <span className={`absolute top-2 right-2 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow ${
+            activeLoan.status === 'PENDING_PAYMENT' ? 'bg-amber-500 text-white' :
+            activeLoan.status === 'PENDING_PICKUP' ? 'bg-blue-500 text-white' :
+            activeLoan.status === 'CHECKED_OUT' ? 'bg-indigo-600 text-white' :
+            'bg-rose-500 text-white'
+          }`}>
+            {activeLoan.status.replace('_', ' ')}
           </span>
         )}
-        <img
-          src={imgUrl}
-          alt={book.title}
-          className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-indigo-900/0 group-hover:bg-indigo-900/10 transition-colors duration-300" />
       </div>
-      <div>
-        <p className="font-bold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">{book.title}</p>
-        <p className="text-xs text-slate-400 mt-0.5">{book.author}</p>
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${pillCls}`}>{book.genre}</span>
-          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-            <BookmarkSimple size={11} />{borrowStr}
+      {/* Info */}
+      <div className="p-4 flex flex-col gap-1.5 flex-1 min-w-0">
+        <h3 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors line-clamp-1">
+          {book.title}
+        </h3>
+        <p className="text-xs text-slate-400 line-clamp-1">{authorStr}</p>
+        <div className="flex items-center justify-between gap-2 flex-wrap mt-auto pt-2">
+          <span className="text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+            {genreName}
+          </span>
+          <span className="text-[10.5px] text-slate-400 flex items-center gap-1">
+            <BookmarkSimple size={11} /> {book.availableCopies}/{book.totalCopies}
           </span>
         </div>
       </div>
-    </motion.div>
+    </article>
   );
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 interface SidebarProps {
-  selectedGenre: string;
-  setSelectedGenre: (g: string) => void;
-  selectedAuthor: string;
-  setSelectedAuthor: (a: string) => void;
+  genres: GenreResponse[];
+  authors: any[];
+  selectedGenreId: number | null;
+  setSelectedGenreId: (id: number | null) => void;
+  selectedAuthorId: number | null;
+  setSelectedAuthorId: (id: number | null) => void;
   showAll: boolean;
   setShowAll: (v: boolean) => void;
   onReset: () => void;
 }
 
 function Sidebar({
-  selectedGenre, setSelectedGenre,
-  selectedAuthor, setSelectedAuthor,
-  showAll, setShowAll,
+  genres,
+  authors,
+  selectedGenreId,
+  setSelectedGenreId,
+  selectedAuthorId,
+  setSelectedAuthorId,
+  showAll,
+  setShowAll,
   onReset,
 }: SidebarProps) {
-  const genres = showAll ? GENRES : GENRES.slice(0, 6);
+  const visibleGenres = showAll ? genres : genres.slice(0, 5);
 
   return (
-    <aside className="w-[220px] shrink-0 bg-white border border-slate-200 rounded-2xl p-5 sticky top-20 self-start">
-      <div className="flex justify-between items-center mb-4">
-        <span className="font-bold text-[0.9rem] text-slate-900">Bộ lọc</span>
-        <button type="button" onClick={onReset} className="cursor-pointer text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
-          Xóa tất cả
-        </button>
-      </div>
-
-      {/* Genre */}
-      <div className="mb-5">
-        <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-2.5">Thể loại</p>
-        <div className="flex flex-col gap-0.5">
-          {genres.map((g) => (
-            <label key={g.label} className="flex items-center gap-2 py-1 px-0.5 cursor-pointer">
-              <input
-                type="checkbox"
-                className="accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
-                checked={selectedGenre === g.label}
-                onChange={() => setSelectedGenre(selectedGenre === g.label ? '' : g.label)}
-              />
-              <span className="text-[0.8rem] text-slate-700 flex-1">{g.label}</span>
-              <span className="text-[0.7rem] text-slate-400">({g.count.toLocaleString()})</span>
-            </label>
-          ))}
+    <aside className="w-60 shrink-0 bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-6 shadow-sm">
+      {/* Genre Section */}
+      <div>
+        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Genre</h3>
+        <ul className="flex flex-col gap-0.5 list-none">
+          {visibleGenres.map((g) => {
+            const isActive = selectedGenreId === g.id;
+            return (
+              <li key={g.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGenreId(isActive ? null : g.id)}
+                  className={[
+                    'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all cursor-pointer text-left',
+                    isActive
+                      ? 'bg-indigo-50 text-indigo-700 font-semibold border-l-2 border-indigo-600'
+                      : 'text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600',
+                  ].join(' ')}
+                >
+                  <span>{g.name}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {genres.length > 5 && (
           <button
             type="button"
             onClick={() => setShowAll(!showAll)}
-            className="cursor-pointer text-[0.78rem] font-semibold text-indigo-600 hover:text-indigo-700 text-left pt-1 mt-0.5 transition-colors"
+            className="cursor-pointer text-xs font-bold text-indigo-600 hover:text-indigo-700 mt-2 ml-3"
           >
-            {showAll ? 'Thu gọn ▲' : 'Xem thêm ▼'}
+            {showAll ? 'Show less' : 'Show more +'}
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Author */}
-      <div className="mb-5">
-        <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-2.5">Tác giả</p>
-        <select
-          value={selectedAuthor}
-          onChange={(e) => setSelectedAuthor(e.target.value)}
-          className="cursor-pointer w-full px-2.5 py-2 rounded-lg border border-slate-200 text-[0.8rem] text-slate-700 bg-white outline-none"
-        >
-          <option value="">Chọn tác giả</option>
-          {AUTHORS.map((a) => <option key={a} value={a}>{a}</option>)}
-        </select>
-      </div>
+      <div className="h-px bg-slate-100" />
 
-      {/* Year */}
-      <div className="mb-5">
-        <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-2.5">Năm xuất bản</p>
-        <div className="flex gap-2 items-center">
-          <input type="number" placeholder="Từ năm" className="w-[78px] px-2 py-1.5 rounded-lg border border-slate-200 text-xs outline-none" />
-          <span className="text-slate-300">-</span>
-          <input type="number" placeholder="Đến" className="w-[78px] px-2 py-1.5 rounded-lg border border-slate-200 text-xs outline-none" />
-        </div>
-      </div>
-
-      {/* Language */}
-      <div className="mb-5">
-        <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-2.5">Ngôn ngữ</p>
-        <select className="cursor-pointer w-full px-2.5 py-2 rounded-lg border border-slate-200 text-[0.8rem] text-slate-700 bg-white outline-none">
-          <option>Tất cả ngôn ngữ</option>
-          <option>Tiếng Việt</option>
-          <option>Tiếng Anh</option>
-        </select>
-      </div>
-
-      {/* Sort */}
+      {/* Author Section */}
       <div>
-        <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-2.5">Sắp xếp theo</p>
-        <select className="cursor-pointer w-full px-2.5 py-2 rounded-lg border border-slate-200 text-[0.8rem] text-slate-700 bg-white outline-none">
-          <option>Phổ biến nhất</option>
-          <option>Mới nhất</option>
-          <option>Tên A-Z</option>
+        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Author</h3>
+        <select
+          value={selectedAuthorId || ''}
+          onChange={(e) => setSelectedAuthorId(e.target.value ? Number(e.target.value) : null)}
+          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer"
+        >
+          <option value="">All Authors</option>
+          {authors.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
         </select>
       </div>
+
+      <div className="h-px bg-slate-100" />
+
+      {/* Reset Filter Button */}
+      <button
+        type="button"
+        onClick={onReset}
+        className="cursor-pointer w-full py-2.5 border-2 border-slate-200 hover:border-indigo-600 hover:text-indigo-600 text-slate-500 font-semibold text-sm rounded-xl transition-all"
+      >
+        Reset Filters
+      </button>
     </aside>
   );
 }
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-function Pagination({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) {
-  const btnCls = (active: boolean, disabled = false) => [
-    'w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold border transition-all duration-150',
-    active    ? 'bg-indigo-600 border-indigo-600 text-white' : '',
-    !active && !disabled ? 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 cursor-pointer' : '',
-    disabled  ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' : '',
-  ].filter(Boolean).join(' ');
+// ─── Pagination ──────────────────────────────────────────────────────────────
+interface PaginationProps {
+  current: number;
+  total: number;
+  onChange: (p: number) => void;
+}
+
+function Pagination({ current, total, onChange }: PaginationProps) {
+  const btnCls = (act: boolean, dis?: boolean) => [
+    'cursor-pointer w-9 h-9 rounded-xl flex items-center justify-center text-sm font-semibold transition-all border',
+    act ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200/60' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300',
+    dis ? 'opacity-40 cursor-not-allowed pointer-events-none' : '',
+  ].join(' ');
+
+  if (total <= 1) return null;
+
+  // Build page number list with ellipsis markers
+  const pages: (number | '...')[] = [];
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end   = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+  }
 
   return (
-    <div className="flex items-center justify-center gap-1.5 mt-10">
-      <button className={btnCls(false, current === 1)} onClick={() => onChange(Math.max(1, current - 1))} disabled={current === 1}>
+    <div className="flex items-center justify-center gap-1.5 mt-8 select-none">
+      <button
+        className={btnCls(false, current === 1)}
+        onClick={() => onChange(current - 1)}
+        disabled={current === 1}
+        aria-label="Previous page"
+      >
         <CaretLeft size={13} weight="bold" />
       </button>
-      {[1, 2, 3, 4, 5].map((p) => (
-        <button key={p} className={btnCls(p === current)} onClick={() => onChange(p)}>{p}</button>
-      ))}
-      <span className="text-slate-400 text-sm px-1">…</span>
-      <button className={btnCls(current === total)} onClick={() => onChange(total)}>{total}</button>
-      <button className={btnCls(false, current === total)} onClick={() => onChange(Math.min(total, current + 1))} disabled={current === total}>
+
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`ellipsis-${i}`} className="w-9 h-9 flex items-center justify-center text-slate-400 text-sm select-none">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            className={btnCls(p === current)}
+            onClick={() => onChange(p as number)}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        className={btnCls(false, current === total)}
+        onClick={() => onChange(current + 1)}
+        disabled={current === total}
+        aria-label="Next page"
+      >
         <CaretRight size={13} weight="bold" />
       </button>
     </div>
@@ -461,36 +567,99 @@ function Pagination({ current, total, onChange }: { current: number; total: numb
 export default function BrowseBooksPage() {
   const [searchParams] = useSearchParams();
 
-  // Read URL query params to auto-apply filters on mount / URL change
-  const paramCategory = decodeURIComponent(searchParams.get('category') ?? '');
-  const paramSearch   = decodeURIComponent(searchParams.get('search') ?? '');
+  // Filters State
+  const [query, setQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedGenreId, setSelectedGenreId] = useState<number | null>(null);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [showAll, setShowAll] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
-  const [query,         setQuery]        = useState(paramSearch);
-  const [selectedGenre, setSelectedGenre] = useState(paramCategory || '');
-  const [selectedAuthor,setSelectedAuthor]= useState('');
-  const [view,          setView]          = useState<'grid' | 'list'>('grid');
-  const [showAll,       setShowAll]       = useState(false);
-  const [currentPage,   setCurrentPage]   = useState(1);
-
-  // Re-sync state if URL params change (e.g. back-nav)
-  useEffect(() => {
-    setQuery(paramSearch);
-    setSelectedGenre(paramCategory || '');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.toString()]);
+  // Books and Metadata list
+  const [books, setBooks] = useState<BookResponse[]>([]);
+  const [genres, setGenres] = useState<GenreResponse[]>([]);
+  const [authors, setAuthors] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Book dialog state
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [selectedBook, setSelectedBook] = useState<BookResponse | null>(null);
 
-  // CheckoutModal state — set khi API borrow trả về sePayCheckout != null
+  // CheckoutModal state
   const [checkoutLoan, setCheckoutLoan] = useState<BookLoanResponse | null>(null);
   const { isAuthenticated } = useAuth();
-  const [borrowingBookIds, setBorrowingBookIds] = useState<Set<number>>(new Set());
+  const [activeLoansMap, setActiveLoansMap] = useState<Record<number, BookLoanResponse>>({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(query);
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Load genres and authors once
+  useEffect(() => {
+    const loadMetadata = async () => {
+      try {
+        const [genresList, authorsList] = await Promise.all([
+          getGenres(),
+          getAuthors(),
+        ]);
+        setGenres(genresList);
+        setAuthors(authorsList);
+
+        // Handle category from URL search params
+        const categoryParam = searchParams.get('category');
+        if (categoryParam) {
+          const matched = genresList.find(g => g.name.toLowerCase() === categoryParam.toLowerCase());
+          if (matched) {
+            setSelectedGenreId(matched.id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load filter parameters:', err);
+      }
+    };
+    loadMetadata();
+  }, [searchParams]);
+
+  // Load books from backend when filters change
+  useEffect(() => {
+    const fetchBooks = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await getBooks({
+          searchTerm: debouncedSearch || undefined,
+          genreId: selectedGenreId || undefined,
+          authorId: selectedAuthorId || undefined,
+          page: currentPage - 1,
+          size: 12,
+          sortBy: 'createdAt',
+          sortDirection: 'DESC',
+        });
+        setBooks(data.content);
+        setTotalPages(data.totalPages);
+        setTotalElements(data.totalElements);
+      } catch (err: any) {
+        setError(err.message || 'Không thể tải danh sách sách từ máy chủ.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchBooks();
+  }, [debouncedSearch, selectedGenreId, selectedAuthorId, currentPage, refreshTrigger]);
 
   // Fetch active borrowing book IDs for logged-in user
   useEffect(() => {
     if (!isAuthenticated) {
-      setBorrowingBookIds(new Set());
+      setActiveLoansMap({});
       return;
     }
     const fetchActiveLoans = async () => {
@@ -498,16 +667,21 @@ export default function BrowseBooksPage() {
         const response = await getMyLoans(undefined, 0, 100);
         const activeLoans = response.content.filter(loan =>
           loan.status === 'PENDING_PAYMENT' ||
+          loan.status === 'PENDING_PICKUP' ||
           loan.status === 'CHECKED_OUT' ||
           loan.status === 'OVERDUE'
         );
-        setBorrowingBookIds(new Set(activeLoans.map(loan => loan.bookId)));
+        const map: Record<number, BookLoanResponse> = {};
+        activeLoans.forEach((loan) => {
+          map[loan.bookId] = loan;
+        });
+        setActiveLoansMap(map);
       } catch (err) {
-        console.error('Lỗi khi lấy danh sách sách đang mượn:', err);
+        console.error('Failed to load active loans:', err);
       }
     };
     fetchActiveLoans();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, refreshTrigger]);
 
   const handlePaidCheckout = useCallback((loan: BookLoanResponse) => {
     setCheckoutLoan(loan);
@@ -518,20 +692,12 @@ export default function BrowseBooksPage() {
   }, []);
 
   const handleReset = () => {
-    setSelectedGenre('');
-    setSelectedAuthor('');
+    setSelectedGenreId(null);
+    setSelectedAuthorId(null);
     setQuery('');
+    setDebouncedSearch('');
     setCurrentPage(1);
   };
-
-  const filtered: Book[] = MOCK_BOOKS.filter((b) => {
-    const mG = !selectedGenre || b.genre === selectedGenre;
-    const mA = !selectedAuthor || b.author === selectedAuthor;
-    const mQ = !query
-      || b.title.toLowerCase().includes(query.toLowerCase())
-      || b.author.toLowerCase().includes(query.toLowerCase());
-    return mG && mA && mQ;
-  });
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -542,17 +708,9 @@ export default function BrowseBooksPage() {
 
           {/* Page Header */}
           <div className="mb-5">
-            <h1 className="text-[1.65rem] font-extrabold text-slate-900 tracking-tight">Duyệt sách</h1>
+            <h1 className="text-[1.65rem] font-extrabold text-slate-900 tracking-tight">Book Library</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Tìm kiếm và khám phá sách theo thể loại, tác giả hoặc chủ đề bạn quan tâm.
-              {selectedGenre && (
-                <span className="ml-2 inline-flex items-center gap-1.5 text-indigo-600 font-semibold">
-                  Đang lọc: {selectedGenre}
-                  <button type="button" onClick={() => setSelectedGenre('')} className="cursor-pointer hover:text-indigo-800">
-                    <X size={12} weight="bold" />
-                  </button>
-                </span>
-              )}
+              Search and explore books by genre, author, or topic.
             </p>
           </div>
 
@@ -563,7 +721,7 @@ export default function BrowseBooksPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm kiếm sách, tác giả, thể loại…"
+              placeholder="Search books, authors, genres..."
               className="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 placeholder:text-slate-400"
             />
             {query && (
@@ -596,9 +754,14 @@ export default function BrowseBooksPage() {
             {/* Sidebar */}
             <div className="hidden lg:block">
               <Sidebar
-                selectedGenre={selectedGenre}   setSelectedGenre={setSelectedGenre}
-                selectedAuthor={selectedAuthor} setSelectedAuthor={setSelectedAuthor}
-                showAll={showAll}               setShowAll={setShowAll}
+                genres={genres}
+                authors={authors}
+                selectedGenreId={selectedGenreId}
+                setSelectedGenreId={setSelectedGenreId}
+                selectedAuthorId={selectedAuthorId}
+                setSelectedAuthorId={setSelectedAuthorId}
+                showAll={showAll}
+                setShowAll={setShowAll}
                 onReset={handleReset}
               />
             </div>
@@ -606,21 +769,30 @@ export default function BrowseBooksPage() {
             {/* Books */}
             <div className="flex-1 min-w-0">
               <p className="text-[0.9rem] font-bold text-slate-900 mb-5">
-                Tất cả sách{' '}
-                <span className="font-normal text-slate-400">({filtered.length.toLocaleString()})</span>
+                All Books{' '}
+                <span className="font-normal text-slate-400">({totalElements.toLocaleString()})</span>
               </p>
 
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <CircleNotch size={32} className="animate-spin text-indigo-600" />
+                  <p className="text-sm text-slate-400">Loading books...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12 text-sm text-rose-500 bg-rose-50 border border-rose-100 rounded-2xl p-6">
+                  {error}
+                </div>
+              ) : books.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
                   <BookOpen size={40} className="text-slate-300" />
-                  <p className="font-semibold text-slate-600">Không tìm thấy kết quả</p>
-                  <p className="text-sm text-slate-400">Thử thay đổi bộ lọc hoặc từ khóa</p>
+                  <p className="font-semibold text-slate-600">No results found</p>
+                  <p className="text-sm text-slate-400">Try adjusting your filters or search term</p>
                   <button
                     type="button"
                     onClick={handleReset}
                     className="cursor-pointer mt-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
                   >
-                    Xóa bộ lọc
+                    Reset Filters
                   </button>
                 </div>
               ) : (
@@ -628,20 +800,20 @@ export default function BrowseBooksPage() {
                   ? 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6'
                   : 'flex flex-col gap-3'
                 }>
-                  {filtered.map((book) => (
+                  {books.map((book) => (
                     <BookCard
                       key={book.id}
                       book={book}
                       view={view}
                       onClick={setSelectedBook}
-                      isBorrowing={borrowingBookIds.has(Number(book.id.replace(/\D/g, '')) || 1)}
+                      activeLoan={activeLoansMap[book.id]}
                     />
                   ))}
                 </div>
               )}
 
-              {filtered.length > 0 && (
-                <Pagination current={currentPage} total={50} onChange={setCurrentPage} />
+              {!isLoading && !error && books.length > 0 && (
+                <Pagination current={currentPage} total={totalPages} onChange={setCurrentPage} />
               )}
             </div>
           </div>
@@ -655,15 +827,15 @@ export default function BrowseBooksPage() {
                 <BookOpen size={22} weight="bold" className="text-indigo-600" />
               </div>
               <div>
-                <p className="font-bold text-slate-900 text-[0.95rem]">Không tìm thấy cuốn sách bạn muốn?</p>
-                <p className="text-sm text-slate-500 mt-0.5">Gửi yêu cầu để thư viện bổ sung cho bạn</p>
+                <p className="font-bold text-slate-900 text-[0.95rem]">Can't find the book you're looking for?</p>
+                <p className="text-sm text-slate-500 mt-0.5">Send us a request and we'll add it to the library</p>
               </div>
             </div>
             <button
               type="button"
               className="cursor-pointer shrink-0 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-md shadow-indigo-300/30 active:scale-[0.97]"
             >
-              Gửi yêu cầu
+              Request a Book
             </button>
           </div>
         </div>
@@ -683,7 +855,7 @@ export default function BrowseBooksPage() {
               <span className="text-slate-200">|</span>
               <span className="text-xs text-slate-400">© 2026 BookNest.</span>
             </div>
-            <p className="text-xs text-slate-400 italic">"Mỗi cuốn sách là một hành trình."</p>
+            <p className="text-xs text-slate-400 italic">"Every book is a journey."</p>
           </div>
         </footer>
       </main>
@@ -691,19 +863,30 @@ export default function BrowseBooksPage() {
       {/* ── Book Detail Dialog (MUI) ─────────────────────────────────────── */}
       <BookDetailDialog
         book={selectedBook}
-        onClose={() => setSelectedBook(null)}
+        onClose={(needRefresh) => {
+          setSelectedBook(null);
+          if (needRefresh) setRefreshTrigger((prev) => prev + 1);
+        }}
         onPaidCheckout={handlePaidCheckout}
-        isBorrowing={selectedBook ? borrowingBookIds.has(Number(selectedBook.id.replace(/\D/g, '')) || 1) : false}
+        activeLoan={selectedBook ? activeLoansMap[selectedBook.id] : undefined}
       />
 
-      {/* ── CheckoutModal — hiện khi cần thanh toán mượn lẻ ──────────────── */}
       {checkoutLoan && checkoutLoan.sePayCheckout && (
         <CheckoutModal
           loanId={checkoutLoan.id}
           bookTitle={checkoutLoan.bookTitle}
           sePayCheckout={checkoutLoan.sePayCheckout}
-          onClose={() => setCheckoutLoan(null)}
-          onSuccess={handleCheckoutSuccess}
+          onClose={(reason) => {
+            setCheckoutLoan(null);
+            if (reason === 'expired') {
+              toast.error('Reservation time expired. Borrow request automatically cancelled.');
+            }
+            setRefreshTrigger((prev) => prev + 1);
+          }}
+          onSuccess={() => {
+            handleCheckoutSuccess();
+            setRefreshTrigger((prev) => prev + 1);
+          }}
         />
       )}
     </div>
