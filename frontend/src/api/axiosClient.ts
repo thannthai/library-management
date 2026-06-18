@@ -26,8 +26,10 @@ import type {
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: `${apiBaseUrl}/api`,
   withCredentials: true,           // Required — attaches HttpOnly Cookie on all requests
   headers: {
     'Content-Type': 'application/json',
