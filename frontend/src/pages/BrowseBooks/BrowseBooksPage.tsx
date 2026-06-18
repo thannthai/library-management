@@ -603,7 +603,7 @@ export default function BrowseBooksPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Load genres and authors once
+  // Load genres and authors once on mount
   useEffect(() => {
     const loadMetadata = async () => {
       try {
@@ -613,21 +613,23 @@ export default function BrowseBooksPage() {
         ]);
         setGenres(genresList);
         setAuthors(authorsList);
-
-        // Handle category from URL search params
-        const categoryParam = searchParams.get('category');
-        if (categoryParam) {
-          const matched = genresList.find(g => g.name.toLowerCase() === categoryParam.toLowerCase());
-          if (matched) {
-            setSelectedGenreId(matched.id);
-          }
-        }
       } catch (err) {
         console.error('Failed to load filter parameters:', err);
       }
     };
     loadMetadata();
-  }, [searchParams]);
+  }, []);
+
+  // Sync category parameter from URL when genres are loaded or category parameter changes
+  const categoryParam = searchParams.get('category');
+  useEffect(() => {
+    if (categoryParam && genres.length > 0) {
+      const matched = genres.find(g => g.name.toLowerCase() === categoryParam.toLowerCase());
+      if (matched) {
+        setSelectedGenreId(matched.id);
+      }
+    }
+  }, [categoryParam, genres]);
 
   // Load books from backend when filters change
   useEffect(() => {

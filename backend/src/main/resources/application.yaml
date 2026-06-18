@@ -11,10 +11,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         query:
           fail_on_pagination_over_collection_fetch: true
 
@@ -56,3 +56,10 @@ sepay:
   webhook-token: ${SEPAY_WEBHOOK_TOKEN}
   bank-code: ${SEPAY_BANK_CODE:TCB}
   bank-account: ${SEPAY_BANK_ACCOUNT:93767}
+
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN

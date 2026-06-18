@@ -14,15 +14,16 @@ export default function SettingsPage() {
   // Tab state: 'profile' | 'security'
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
 
+  const tabParam = searchParams.get('tab');
+
   // Read tab parameter from URL search query
   useEffect(() => {
-    const tabParam = searchParams.get('tab');
     if (tabParam === 'security') {
       setActiveTab('security');
     } else {
       setActiveTab('profile');
     }
-  }, [searchParams]);
+  }, [tabParam]);
 
   // Profile Form States
   const [fullName, setFullName] = useState('');
